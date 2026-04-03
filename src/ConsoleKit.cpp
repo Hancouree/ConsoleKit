@@ -1,13 +1,16 @@
-#include "ConsoleKit.h"
+﻿#include "ConsoleKit.h"
 #include <string>
 #include <algorithm>
 
 namespace ck {
-    #define GET_NOW std::chrono::steady_clock::now()
+    inline auto GET_NOW() {
+        return std::chrono::steady_clock::now();
+    }
 
     ScreenManager::ScreenManager() 
         : m_height(0)
         , m_finished(false)
+        , m_maxLogs(25)
     {
     }
 
@@ -22,6 +25,11 @@ namespace ck {
         }
     }
 
+    void ScreenManager::setMaxLogs(size_t n)
+    {
+        m_maxLogs = n;
+    }
+
     void ScreenManager::refresh()
     {
         if (m_height == 0 && m_logs.size() == 0) return;
@@ -31,7 +39,7 @@ namespace ck {
         std::cout << "\033[" << m_height + m_logs.size() << "A";
 
         for (int i = 0; i < m_components.size(); ++i) {
-            std::cout << "\r\033[K" << m_components[i].draw() << "\n";
+            std::cout << "\r\033[K" << m_components[i]->draw() << "\n";
         }
 
         for (const auto& msg : m_logs) {
@@ -45,8 +53,12 @@ namespace ck {
         std::cout << "\033[u" << std::flush;
     }
 
-    void ScreenManager::print(const std::string& message)
+    void ScreenManager::log(const std::string& message)
     {
+        if (m_logs.size() >= m_maxLogs) {
+            m_logs.pop_front();
+        }
+
         m_logs.push_back(message);
         refresh();
     }
@@ -54,21 +66,22 @@ namespace ck {
     ProgressBar::ProgressBar(int finalValue)
         : m_finalValue(finalValue)
         , m_width(50)
-        , m_startTime(GET_NOW)
-        , m_lastDraw(GET_NOW)
+        , m_startTime(GET_NOW())
+        , m_lastDraw(GET_NOW())
         , m_showPercent(false)
         , m_showSpeed(false)
         , m_showETA(false)
         , m_mgr(nullptr)
     {
+        if (finalValue < 0) throw std::invalid_argument("finalValue must be > 0");
     }
 
     ProgressBar::ProgressBar(int currentValue, int finalValue)
         : m_currentValue(currentValue)
         , m_finalValue(finalValue)
         , m_width(50)
-        , m_startTime(GET_NOW)
-        , m_lastDraw(GET_NOW)
+        , m_startTime(GET_NOW())
+        , m_lastDraw(GET_NOW())
         , m_showPercent(false)
         , m_showSpeed(false)
         , m_showETA(false)
@@ -77,6 +90,7 @@ namespace ck {
     }
 
     void ProgressBar::setWidth(int width) {
+        if (width <= 0) throw std::invalid_argument("Invalid width");
         m_width = width;
     }
 
@@ -132,7 +146,7 @@ namespace ck {
     void ProgressBar::update(int currentValue) {
         m_currentValue = std::min(currentValue, m_finalValue);
 
-        auto now = GET_NOW;
+        auto now = GET_NOW();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastDraw).count();
 
         if (elapsed > m_minUpdateIntervalMs || m_currentValue == m_finalValue) {
@@ -170,7 +184,7 @@ namespace ck {
     }
 
     double ProgressBar::getSpeed() const {
-        auto now = GET_NOW;
+        auto now = GET_NOW();
         auto elapsed = std::chrono::duration<double>(now - m_startTime).count();
         if (elapsed < 0.001) return 0;
         return m_currentValue / elapsed;
@@ -198,7 +212,7 @@ namespace ck {
     }
 
     Spinner::Spinner()
-        : m_lastUpdate(GET_NOW)
+        : m_lastUpdate(GET_NOW())
         , m_currentFrame(0)
         , m_mgr(nullptr)
     {
@@ -232,7 +246,7 @@ namespace ck {
     }
 
     void Spinner::update() {
-        auto now = GET_NOW;
+        auto now = GET_NOW();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
 
         if (elapsed > m_minUpdateIntervalMs) {
@@ -247,5 +261,129 @@ namespace ck {
 
             m_lastUpdate = now;
         }
+    }
+
+    ActivityBar::ActivityBar()
+        : m_width(50)
+        , m_currentFrame(0)
+        , m_delta(1)
+        , m_mgr(nullptr)
+        , m_lastUpdate(GET_NOW())
+        , m_style(Style::Marquee)
+    {
+    }
+
+    ActivityBar::ActivityBar(const std::string& str) : ActivityBar()
+    {
+        m_text = str;
+    }
+
+    void ActivityBar::setWidth(int width)
+    {
+        if (width <= 0) throw std::invalid_argument("Invalid width");
+        m_width = width;
+    }
+
+    void ActivityBar::setStyle(Style s)
+    {
+        m_style = s;
+    }
+
+    void ActivityBar::setText(const std::string& str)
+    {
+        m_text = str;
+    }
+
+    void ActivityBar::setCurrentFrame(int frame)
+    {
+        if (frame < 0 || frame > m_width) throw std::invalid_argument("Invalid frame");
+        m_currentFrame = frame;
+    }
+
+    void ActivityBar::setScreenManager(ScreenManager* mgr)
+    {
+        m_mgr = mgr;
+    }
+
+    std::string ActivityBar::draw()
+    {
+        std::string output;
+
+        output += '[';
+
+        switch (m_style)
+        {
+        case ck::ActivityBar::Marquee:
+            output += drawMarquee();
+            break;
+        case ck::ActivityBar::Pulse:
+            output += drawPulse();
+            break;
+        case ck::ActivityBar::Bounce:
+            output += drawBounce();
+            break;
+        }
+
+        output += ']';
+
+        if (!m_text.empty()) {
+            output += " " + m_text;
+        }
+
+        return output;
+    }
+
+    void ActivityBar::update()
+    {
+        auto now = GET_NOW();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
+
+        if (elapsed > m_minUpdateIntervalMs) {
+            if (m_currentFrame >= m_width || m_currentFrame < 0) {
+                m_delta *= -1;
+            }
+            m_currentFrame += m_delta;
+
+            if (m_mgr) {
+                m_mgr->refresh();
+            }
+            else {
+                std::cout << "\r" << draw() << std::flush;
+            }
+
+            m_lastUpdate = now;
+        }
+    }
+
+    std::string ActivityBar::drawMarquee()
+    {
+        std::string output;
+        for (int i = 0; i < m_width; ++i) {
+            if (i < m_currentFrame) output += ' ';
+            else if (i == m_currentFrame) output += (m_delta == 1 ? '>' : '<');
+            else output += ' ';
+        }
+        return output;
+    }
+
+    std::string ActivityBar::drawPulse()
+    {
+        std::string output;
+        for (int i = 0; i < m_width; ++i) {
+            if (i <= m_currentFrame) output += '=';
+            else output += ' ';
+        }
+        return output;
+    }
+
+    std::string ActivityBar::drawBounce()
+    {
+        std::string output;
+        for (int i = 0; i < m_width; ++i) {
+            if (i < m_currentFrame) output += ' ';
+            else if (i == m_currentFrame) output += 'O';
+            else output += ' ';
+        }
+        return output;
     }
 }
