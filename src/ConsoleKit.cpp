@@ -17,26 +17,6 @@ namespace ck {
         inline constexpr const char* HIDE_CURSOR = "\033[?25l";
         inline constexpr const char* SHOW_CURSOR = "\033[?25h";
 
-        ////COLORS
-        //inline constexpr const char* BLACK = "\033[30m";
-        //inline constexpr const char* RED = "\033[31m";
-        //inline constexpr const char* GREEN = "\033[32m";
-        //inline constexpr const char* YELLOW = "\033[33m";
-        //inline constexpr const char* BLUE = "\033[34m";
-        //inline constexpr const char* MAGENTA = "\033[35m";
-        //inline constexpr const char* CYAN = "\033[36m";
-        //inline constexpr const char* WHITE = "\033[37m";
-
-        ////BRIGHT COLORS
-        //inline constexpr const char* BRIGHT_BLACK = "\033[90m";
-        //inline constexpr const char* BRIGHT_RED = "\033[91m";
-        //inline constexpr const char* BRIGHT_GREEN = "\033[92m";
-        //inline constexpr const char* BRIGHT_YELLOW = "\033[93m";
-        //inline constexpr const char* BRIGHT_BLUE = "\033[94m";
-        //inline constexpr const char* BRIGHT_MAGENTA = "\033[95m";
-        //inline constexpr const char* BRIGHT_CYAN = "\033[96m";
-        //inline constexpr const char* BRIGHT_WHITE = "\033[97m";
-
         inline std::string move_up(int n) {
             return n > 0 ? "\033[" + std::to_string(n) + "A" : "";
         }
@@ -185,7 +165,7 @@ namespace ck {
     std::string ProgressBar::draw() const {
         int filled = static_cast<double>(m_currentValue) / m_finalValue * m_width;
 
-        std::string output;
+        std::string output = color_to_ansi(m_color);
 
         if (!m_text.empty()) {
             output += m_text + " ";
@@ -218,6 +198,8 @@ namespace ck {
         if (m_showETA) {
             output += " " + formatTime(getTimeLeft());
         }
+
+        output += RESET;
 
         return output;
     }
@@ -319,13 +301,15 @@ namespace ck {
             return m_text;
         }
 
-        std::string output;
+        std::string output = color_to_ansi(m_color);
 
         if (!m_text.empty()) {
             output += m_text + " ";
         }
 
         output += m_frames[m_currentFrame];
+        output += RESET;
+
         return output;
     }
 
@@ -400,7 +384,7 @@ namespace ck {
 
     std::string ActivityBar::draw() const
     {
-        std::string output;
+        std::string output = color_to_ansi(m_color);
 
         output += '[';
 
@@ -422,6 +406,8 @@ namespace ck {
         if (!m_text.empty()) {
             output += " " + m_text;
         }
+
+        output += RESET;
 
         return output;
     }
@@ -489,7 +475,7 @@ namespace ck {
     std::string Table::draw() const
     {
         auto widths = getColumnsWidth();
-        std::string output;
+        std::string output = color_to_ansi(m_color);
 
         output += drawLine(widths, '-') + '\n';
         output += drawRow(m_columns, widths) + '\n';
@@ -498,6 +484,8 @@ namespace ck {
             output += drawRow(row, widths) + '\n';
         if (m_rows.size() > 0)
             output += drawLine(widths, '-');
+
+        output += RESET;
 
         return output;
     }
@@ -512,7 +500,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << '\r' << draw() << std::flush;
+                std::cout << "\r" << draw() << std::flush;
             }
 
             m_lastUpdate = now;

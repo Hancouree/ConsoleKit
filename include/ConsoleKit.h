@@ -11,16 +11,6 @@ namespace ck {
     class ActivityBar;
     class Table;
 
-    class IComponent {
-    public:
-        virtual ~IComponent() = default;
-        virtual void setScreenManager(ScreenManager* mgr) { m_mgr = mgr; }
-        virtual std::string draw() const = 0;
-        virtual int getHeight() const { return 1; };
-    protected:
-        ScreenManager* m_mgr = nullptr;
-    };
-
     enum Color {
         Black = 30,
         Red,
@@ -38,6 +28,19 @@ namespace ck {
         LightMagneta,
         LightCyan,
         White
+    };
+
+    class IComponent {
+    public:
+        virtual ~IComponent() = default;
+        virtual void setScreenManager(ScreenManager* mgr) { m_mgr = mgr; }
+        virtual void setColor(Color c) { m_color = c; }
+        virtual Color getColor() const { return m_color; }
+        virtual std::string draw() const = 0;
+        virtual int getHeight() const { return 1; };
+    protected:
+        ScreenManager* m_mgr = nullptr;
+        Color m_color = Grey;
     };
 
     class ScreenManager {
