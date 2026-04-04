@@ -6,6 +6,9 @@
 
 namespace ck {
     class ScreenManager;
+    class ProgressBar;
+    class Spinner;
+    class ActivityBar;
 
     class IComponent {
     public:
@@ -29,7 +32,14 @@ namespace ck {
             m_components.push_back(std::move(owner));
             ++m_height;
             return ref;
-        }
+        };
+
+        ProgressBar& addProgressBar(int finalValue);
+        ProgressBar& addProgressBar(int currentValue, int finalValue);
+        Spinner& addSpinner();
+        Spinner& addSpinner(const std::string& str);
+        ActivityBar& addActivityBar();
+        ActivityBar& addActivityBar(const std::string& str);
 
         void setMaxLogs(size_t n);
         void refresh();

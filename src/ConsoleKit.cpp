@@ -25,6 +25,36 @@ namespace ck {
         }
     }
 
+    ProgressBar& ScreenManager::addProgressBar(int finalValue)
+    {
+        return add<ProgressBar>(finalValue);
+    }
+
+    ProgressBar& ScreenManager::addProgressBar(int currentValue, int finalValue)
+    {
+        return add<ProgressBar>(currentValue, finalValue);
+    }
+
+    Spinner& ScreenManager::addSpinner()
+    {
+        return add<Spinner>();
+    }
+
+    Spinner& ScreenManager::addSpinner(const std::string& str)
+    {
+        return add<Spinner>(str);
+    }
+
+    ActivityBar& ScreenManager::addActivityBar()
+    {
+        return add<ActivityBar>();
+    }
+
+    ActivityBar& ScreenManager::addActivityBar(const std::string& str)
+    {
+        return add<ActivityBar>(str);
+    }
+
     void ScreenManager::setMaxLogs(size_t n)
     {
         m_maxLogs = n;
