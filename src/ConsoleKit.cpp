@@ -1,7 +1,6 @@
 ﻿#include "ConsoleKit.h"
 #include <string>
 #include <algorithm>
-#include <sstream>
 #include <numeric>
 
 namespace ck {
@@ -80,11 +79,14 @@ namespace ck {
 
         for (size_t i = 0; i < m_components.size(); ++i) {
             std::string drawn = m_components[i]->draw();
-            std::istringstream stream(drawn);
-            std::string line;
-            while (std::getline(stream, line)) {
-                std::cout << "\r\033[K" << line << "\n";
+            size_t pos = 0;
+            size_t next;
+            while ((next = drawn.find('\n', pos)) != std::string::npos) {
+                std::cout << "\r\033[K" << drawn.substr(pos, next - pos) << "\n";
+                pos = next + 1;
             }
+
+            std::cout << "\r\033[K" << drawn.substr(pos) << "\n";
         }
 
         for (const auto& msg : m_logs) {
@@ -408,33 +410,20 @@ namespace ck {
 
     std::string ActivityBar::drawMarquee() const
     {
-        std::string output;
-        for (int i = 0; i < m_width; ++i) {
-            if (i < m_currentFrame) output += ' ';
-            else if (i == m_currentFrame) output += (m_delta == 1 ? '>' : '<');
-            else output += ' ';
-        }
+        std::string output(m_width, ' ');
+        output[m_currentFrame] = m_delta > 0 ? '>' : '<';
         return output;
     }
 
     std::string ActivityBar::drawPulse() const
     {
-        std::string output;
-        for (int i = 0; i < m_width; ++i) {
-            if (i <= m_currentFrame) output += '=';
-            else output += ' ';
-        }
-        return output;
+        return std::string(m_currentFrame, '=') + std::string(m_width - m_currentFrame, ' ');
     }
 
     std::string ActivityBar::drawBounce() const
     {
-        std::string output;
-        for (int i = 0; i < m_width; ++i) {
-            if (i < m_currentFrame) output += ' ';
-            else if (i == m_currentFrame) output += 'O';
-            else output += ' ';
-        }
+        std::string output(m_width, ' ');
+        output[m_currentFrame] = 'O';
         return output;
     }
 
@@ -466,7 +455,8 @@ namespace ck {
         output += drawLine(widths, '+') + '\n';
         for (const auto& row : m_rows)
             output += drawRow(row, widths) + '\n';
-        output += drawLine(widths, '-');
+        if (m_rows.size() > 0)
+            output += drawLine(widths, '-');
 
         return output;
     }
@@ -504,7 +494,8 @@ namespace ck {
 
     int Table::getHeight() const
     {
-        return 3 + m_rows.size();
+        int rowsSize = m_rows.size();
+        return rowsSize > 0 ? 4 + rowsSize : 3;
     }
 
     std::string Table::pad(const std::string& str, int width) const
