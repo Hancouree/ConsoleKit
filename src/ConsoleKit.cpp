@@ -8,13 +8,34 @@ namespace ck {
         auto GET_NOW() {
             return std::chrono::steady_clock::now();
         }
+
+        //SEQUENCES
+        inline constexpr const char* RESET = "\033[0m";
+        inline constexpr const char* CLEAR_LINE = "\r\033[2K";
+        inline constexpr const char* CURSOR_SAVE = "\033[s";
+        inline constexpr const char* CURSOR_LOAD = "\033[u";
+        inline constexpr const char* HIDE_CURSOR = "\033[?25l";
+        inline constexpr const char* SHOW_CURSOR = "\033[?25h";
+
+        //COLORS
+        inline constexpr const char* RED = "\033[31m";
+        inline constexpr const char* GREEN = "\033[32m";
+        inline constexpr const char* BLUE = "\033[34m";
+
+        inline std::string move_up(int n) {
+            return n > 0 ? "\033[" + std::to_string(n) + "A" : "";
+        }
+
+        inline std::string move_down(int n) {
+            return n > 0 ? "\033[" + std::to_string(n) + "B" : "";
+        }
     }
 
     ScreenManager::ScreenManager() 
         : m_finished(false)
         , m_maxLogs(25)
     {
-        std::cout << "\033[?25l";
+        std::cout << HIDE_CURSOR;
     }
 
     ScreenManager::~ScreenManager()
@@ -27,9 +48,10 @@ namespace ck {
 
             int totalHeight = m_height + m_logs.size();
             if (totalHeight > 0) {
-                std::cout << "\033[" << totalHeight << "B";
+                std::cout << move_down(totalHeight);
             }
-            std::cout << "\033[?25h";
+
+            std::cout << SHOW_CURSOR;
             m_finished = true;
         }
     }
@@ -73,31 +95,31 @@ namespace ck {
                 return x + c->getHeight();
         });
 
-        std::cout << "\033[s";
+        std::cout << CURSOR_SAVE;
 
-        std::cout << "\033[" << m_height + m_logs.size() << "A";
+        std::cout << move_up(m_height + m_logs.size());
 
         for (size_t i = 0; i < m_components.size(); ++i) {
             std::string drawn = m_components[i]->draw();
             size_t pos = 0;
             size_t next;
             while ((next = drawn.find('\n', pos)) != std::string::npos) {
-                std::cout << "\r\033[K" << drawn.substr(pos, next - pos) << "\n";
+                std::cout << CLEAR_LINE << drawn.substr(pos, next - pos) << "\n";
                 pos = next + 1;
             }
 
-            std::cout << "\r\033[K" << drawn.substr(pos) << "\n";
+            std::cout << CLEAR_LINE << drawn.substr(pos) << "\n";
         }
 
         for (const auto& msg : m_logs) {
-            std::cout << "\r\033[K" << msg << "\n";
+            std::cout << CLEAR_LINE << msg << "\n";
         }
 
         if (!m_components.empty() && m_logs.empty()) {
-            std::cout << "\r\033[K";
+            std::cout << CLEAR_LINE;
         }
 
-        std::cout << "\033[u" << std::flush;
+        std::cout << CURSOR_LOAD << std::flush;
     }
 
     void ScreenManager::log(const std::string& message)
@@ -192,7 +214,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << "\r" << draw() << std::flush;
+                std::cout << CLEAR_LINE << draw() << std::flush;
             }
             m_lastDraw = now;
         }
@@ -301,7 +323,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << "\r" << draw() << std::flush;
+                std::cout << CLEAR_LINE << draw() << std::flush;
             }
 
             m_lastUpdate = now;
@@ -317,7 +339,7 @@ namespace ck {
             m_mgr->refresh();
         }
         else {
-            std::cout << "\r\033[K" << draw() << "\n" << std::flush;
+            std::cout << CLEAR_LINE << draw() << "\n" << std::flush;
         }
     }
 
@@ -401,7 +423,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << "\r" << draw() << std::flush;
+                std::cout << CLEAR_LINE << draw() << std::flush;
             }
 
             m_lastUpdate = now;
@@ -471,7 +493,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << "\r" << draw() << std::flush;
+                std::cout << '\r' << draw() << std::flush;
             }
 
             m_lastUpdate = now;
