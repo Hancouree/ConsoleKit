@@ -9,12 +9,16 @@ namespace ck {
     class ProgressBar;
     class Spinner;
     class ActivityBar;
+    class Table;
 
     class IComponent {
     public:
         virtual ~IComponent() = default;
-        virtual void setScreenManager(ScreenManager* mgr) = 0;
+        virtual void setScreenManager(ScreenManager* mgr) { m_mgr = mgr; }
         virtual std::string draw() const = 0;
+        virtual int getHeight() const { return 1; };
+    protected:
+        ScreenManager* m_mgr = nullptr;
     };
 
     class ScreenManager {
@@ -30,7 +34,6 @@ namespace ck {
             T& ref = *owner;
             ref.setScreenManager(this);
             m_components.push_back(std::move(owner));
-            ++m_height;
             return ref;
         };
 
@@ -38,13 +41,13 @@ namespace ck {
         ProgressBar& addProgressBar(int currentValue, int finalValue);
         Spinner& addSpinner(const std::string& str = "");
         ActivityBar& addActivityBar(const std::string& str = "");
+        Table& addTable(const std::vector<std::string>& columns);
 
         void setMaxLogs(size_t n);
         void refresh();
         void log(const std::string& message);
     private:
         std::vector<std::unique_ptr<IComponent>> m_components;
-        int m_height;
         std::deque<std::string> m_logs;
         size_t m_maxLogs;
         bool m_finished;
@@ -57,7 +60,6 @@ namespace ck {
 
         void setWidth(int width);
         void setText(const std::string& str);
-        void setScreenManager(ScreenManager* mgr) override;
         std::string draw() const override;
         void update(int currentValue);
         void increment(int delta = 1);
@@ -82,8 +84,6 @@ namespace ck {
         bool m_showPercent;
         bool m_showSpeed;
         bool m_showETA;
-
-        ScreenManager* m_mgr;
     };
 
     class Spinner : public IComponent {
@@ -92,7 +92,6 @@ namespace ck {
         Spinner(const std::string& str);
 
         void setText(const std::string& str);
-        void setScreenManager(ScreenManager* mgr) override;
         void setFrames(const std::vector<std::string>& frames);
         std::string draw() const override;
         void update();
@@ -104,8 +103,6 @@ namespace ck {
         int m_currentFrame;
         std::string m_text;
         std::chrono::steady_clock::time_point m_lastUpdate;
-
-        ScreenManager* m_mgr;
     };
 
     class ActivityBar : public IComponent {
@@ -123,7 +120,6 @@ namespace ck {
         void setStyle(Style s);
         void setText(const std::string& str);
         void setCurrentFrame(int frame);
-        void setScreenManager(ScreenManager* mgr) override;
         std::string draw() const override;
         void update();
     private:
@@ -138,7 +134,27 @@ namespace ck {
         int m_delta;
         std::string m_text;
         std::chrono::steady_clock::time_point m_lastUpdate;
+    };
 
-        ScreenManager* m_mgr;
+    class Table : public IComponent {
+    public:
+        Table(const std::vector<std::string>& columns);
+
+        void addRow(const std::vector<std::string>& row);
+        std::string draw() const override;
+        void update();
+
+        std::vector<int> getColumnsWidth() const;
+        int getHeight() const override;
+    private:
+        std::string pad(const std::string& str, int width) const;
+        std::string drawRow(const std::vector<std::string>& cells, const std::vector<int>& widths) const;
+        std::string drawLine(const std::vector<int>& widths, char sep) const;
+
+        int m_minUpdateIntervalMs = 50;
+        std::vector<std::string> m_columns;
+        std::vector<std::vector<std::string>> m_rows;
+        bool m_wasInfoUpdated;
+        std::chrono::steady_clock::time_point m_lastUpdate;
     };
 }

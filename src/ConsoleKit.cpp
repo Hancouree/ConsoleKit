@@ -1,6 +1,8 @@
 ﻿#include "ConsoleKit.h"
 #include <string>
 #include <algorithm>
+#include <sstream>
+#include <numeric>
 
 namespace ck {
     namespace {
@@ -10,8 +12,7 @@ namespace ck {
     }
 
     ScreenManager::ScreenManager() 
-        : m_height(0)
-        , m_finished(false)
+        : m_finished(false)
         , m_maxLogs(25)
     {
         std::cout << "\033[?25l";
@@ -20,6 +21,11 @@ namespace ck {
     ScreenManager::~ScreenManager()
     {
         if (!m_finished) {
+            int m_height = std::accumulate(m_components.begin(), m_components.end(), 0,
+                [](int x, const std::unique_ptr<IComponent>& c) {
+                    return x + c->getHeight();
+                });
+
             int totalHeight = m_height + m_logs.size();
             if (totalHeight > 0) {
                 std::cout << "\033[" << totalHeight << "B";
@@ -49,6 +55,11 @@ namespace ck {
         return add<ActivityBar>(str);
     }
 
+    Table& ScreenManager::addTable(const std::vector<std::string>& columns)
+    {
+        return add<Table>(columns);
+    }
+
     void ScreenManager::setMaxLogs(size_t n)
     {
         m_maxLogs = n;
@@ -56,14 +67,24 @@ namespace ck {
 
     void ScreenManager::refresh()
     {
-        if (m_height == 0 && m_logs.size() == 0) return;
+        if (m_components.empty() && m_logs.empty()) return;
+
+        int m_height = std::accumulate(m_components.begin(), m_components.end(), 0, 
+            [](int x, const std::unique_ptr<IComponent>& c) {
+                return x + c->getHeight();
+        });
 
         std::cout << "\033[s";
 
         std::cout << "\033[" << m_height + m_logs.size() << "A";
 
         for (size_t i = 0; i < m_components.size(); ++i) {
-            std::cout << "\r\033[K" << m_components[i]->draw() << "\n";
+            std::string drawn = m_components[i]->draw();
+            std::istringstream stream(drawn);
+            std::string line;
+            while (std::getline(stream, line)) {
+                std::cout << "\r\033[K" << line << "\n";
+            }
         }
 
         for (const auto& msg : m_logs) {
@@ -96,7 +117,6 @@ namespace ck {
         , m_showPercent(false)
         , m_showSpeed(false)
         , m_showETA(false)
-        , m_mgr(nullptr)
     {
         if (finalValue <= 0) throw std::invalid_argument("finalValue must be > 0");
     }
@@ -117,11 +137,6 @@ namespace ck {
 
     void ProgressBar::setText(const std::string& str) {
         m_text = str;
-    }
-
-    void ProgressBar::setScreenManager(ScreenManager* mgr)
-    {
-        m_mgr = mgr;
     }
 
     std::string ProgressBar::draw() const {
@@ -236,7 +251,6 @@ namespace ck {
         : m_lastUpdate(GET_NOW())
         , m_currentFrame(0)
         , m_finished(false)
-        , m_mgr(nullptr)
     {
         m_frames = {
             "|", "/", "-", "\\"
@@ -249,11 +263,6 @@ namespace ck {
 
     void Spinner::setText(const std::string& str) {
         m_text = str;
-    }
-
-    void Spinner::setScreenManager(ScreenManager* mgr)
-    {
-        m_mgr = mgr;
     }
 
     void Spinner::setFrames(const std::vector<std::string>& frames)
@@ -314,7 +323,6 @@ namespace ck {
         : m_width(50)
         , m_currentFrame(0)
         , m_delta(1)
-        , m_mgr(nullptr)
         , m_lastUpdate(GET_NOW())
         , m_style(Style::Marquee)
     {
@@ -345,11 +353,6 @@ namespace ck {
     {
         if (frame < 0 || frame > m_width) throw std::invalid_argument("Invalid frame");
         m_currentFrame = frame;
-    }
-
-    void ActivityBar::setScreenManager(ScreenManager* mgr)
-    {
-        m_mgr = mgr;
     }
 
     std::string ActivityBar::draw() const
@@ -431,6 +434,100 @@ namespace ck {
             if (i < m_currentFrame) output += ' ';
             else if (i == m_currentFrame) output += 'O';
             else output += ' ';
+        }
+        return output;
+    }
+
+    Table::Table(const std::vector<std::string>& columns) 
+        : m_wasInfoUpdated(false)
+        , m_lastUpdate(GET_NOW())
+    {
+        m_columns = columns;
+    }
+
+    void Table::addRow(const std::vector<std::string>& row)
+    {
+        if (row.size() != m_columns.size()) {
+            throw std::invalid_argument("Row size doesn't match column count");
+        }
+        m_rows.push_back(row);
+        m_wasInfoUpdated = true;
+
+        update();
+    }
+
+    std::string Table::draw() const
+    {
+        auto widths = getColumnsWidth();
+        std::string output;
+
+        output += drawLine(widths, '-') + '\n';
+        output += drawRow(m_columns, widths) + '\n';
+        output += drawLine(widths, '+') + '\n';
+        for (const auto& row : m_rows)
+            output += drawRow(row, widths) + '\n';
+        output += drawLine(widths, '-');
+
+        return output;
+    }
+
+    void Table::update()
+    {
+        auto now = GET_NOW();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
+
+        if (elapsed > m_minUpdateIntervalMs || m_wasInfoUpdated) {
+            if (m_mgr) {
+                m_mgr->refresh();
+            }
+            else {
+                std::cout << "\r" << draw() << std::flush;
+            }
+
+            m_lastUpdate = now;
+            m_wasInfoUpdated = false;
+        }
+    }
+
+    std::vector<int> Table::getColumnsWidth() const
+    {
+        std::vector<int> widths;
+        for (size_t col = 0; col < m_columns.size(); ++col) {
+            int w = m_columns[col].size();
+            for (const auto& row : m_rows) {
+                w = std::max(w, (int)row[col].size());
+            }
+            widths.push_back(w);
+        }
+        return widths;
+    }
+
+    int Table::getHeight() const
+    {
+        return 3 + m_rows.size();
+    }
+
+    std::string Table::pad(const std::string& str, int width) const
+    {
+        return str + std::string(width - str.size(), ' ');
+    }
+
+    std::string Table::drawRow(const std::vector<std::string>& cells, const std::vector<int>& widths) const
+    {
+        std::string output = "|";
+        for (size_t i = 0; i < cells.size(); ++i) {
+            output += pad(cells[i], widths[i]);
+            output += (i + 1 < cells.size()) ? " | " : "|";
+        }
+        return output;
+    }
+
+    std::string Table::drawLine(const std::vector<int>& widths, char sep) const
+    {
+        std::string output = "+";  
+        for (size_t i = 0; i < widths.size(); ++i) {
+            output += std::string(widths[i], '-');
+            output += (i + 1 < widths.size()) ? '-' + std::string(1, sep) + '-' : "+";  
         }
         return output;
     }
