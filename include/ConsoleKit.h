@@ -21,6 +21,25 @@ namespace ck {
         ScreenManager* m_mgr = nullptr;
     };
 
+    enum Color {
+        Black = 30,
+        Red,
+        Green,
+        Yellow,
+        Blue,
+        Magenta,
+        Cyan,
+        Grey,
+        DarkGrey = 90,
+        LightRed,
+        LightGreen,
+        LightYellow,
+        LightBlue,
+        LightMagneta,
+        LightCyan,
+        White
+    };
+
     class ScreenManager {
     public:
         ScreenManager();
