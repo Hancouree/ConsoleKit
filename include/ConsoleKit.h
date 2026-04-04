@@ -14,7 +14,7 @@ namespace ck {
     public:
         virtual ~IComponent() = default;
         virtual void setScreenManager(ScreenManager* mgr) = 0;
-        virtual std::string draw() = 0;
+        virtual std::string draw() const = 0;
     };
 
     class ScreenManager {
@@ -36,10 +36,8 @@ namespace ck {
 
         ProgressBar& addProgressBar(int finalValue);
         ProgressBar& addProgressBar(int currentValue, int finalValue);
-        Spinner& addSpinner();
-        Spinner& addSpinner(const std::string& str);
-        ActivityBar& addActivityBar();
-        ActivityBar& addActivityBar(const std::string& str);
+        Spinner& addSpinner(const std::string& str = "");
+        ActivityBar& addActivityBar(const std::string& str = "");
 
         void setMaxLogs(size_t n);
         void refresh();
@@ -60,7 +58,7 @@ namespace ck {
         void setWidth(int width);
         void setText(const std::string& str);
         void setScreenManager(ScreenManager* mgr) override;
-        std::string draw() override;
+        std::string draw() const override;
         void update(int currentValue);
         void increment(int delta = 1);
         ProgressBar& withPercent(bool enable = true);
@@ -95,10 +93,13 @@ namespace ck {
 
         void setText(const std::string& str);
         void setScreenManager(ScreenManager* mgr) override;
-        std::string draw() override;
+        void setFrames(const std::vector<std::string>& frames);
+        std::string draw() const override;
         void update();
+        void finish(const std::string& message = "Done");
     private:
         int m_minUpdateIntervalMs = 100;
+        bool m_finished;
         std::vector<std::string> m_frames;
         int m_currentFrame;
         std::string m_text;
@@ -123,12 +124,12 @@ namespace ck {
         void setText(const std::string& str);
         void setCurrentFrame(int frame);
         void setScreenManager(ScreenManager* mgr) override;
-        std::string draw() override;
+        std::string draw() const override;
         void update();
     private:
-        std::string drawMarquee();
-        std::string drawPulse();
-        std::string drawBounce();
+        std::string drawMarquee() const;
+        std::string drawPulse() const;
+        std::string drawBounce() const;
 
         int m_minUpdateIntervalMs = 50;
         int m_width;
