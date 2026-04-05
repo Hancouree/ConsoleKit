@@ -10,6 +10,7 @@ namespace ck {
     class Spinner;
     class ActivityBar;
     class Table;
+    class Panel;
 
     enum Color {
         Black = 30,
@@ -64,11 +65,16 @@ namespace ck {
         Spinner& addSpinner(const std::string& str = "");
         ActivityBar& addActivityBar(const std::string& str = "");
         Table& addTable(const std::vector<std::string>& columns);
+        Panel& addPanel(const std::string& title = "");
 
+        void takeComponent(std::unique_ptr<IComponent> component);
+        std::unique_ptr<IComponent> releaseComponent(IComponent* component);
         void setMaxLogs(size_t n);
         void refresh();
         void log(const std::string& message);
     private:
+        int calculateComponentsHeight() const;
+
         std::vector<std::unique_ptr<IComponent>> m_components;
         std::deque<std::string> m_logs;
         size_t m_maxLogs;
@@ -101,7 +107,7 @@ namespace ck {
         std::string m_text;
 
         std::chrono::steady_clock::time_point m_startTime;
-        std::chrono::steady_clock::time_point m_lastDraw;
+        std::chrono::steady_clock::time_point m_lastUpdate;
 
         bool m_showPercent;
         bool m_showSpeed;
@@ -177,6 +183,38 @@ namespace ck {
         std::vector<std::string> m_columns;
         std::vector<std::vector<std::string>> m_rows;
         bool m_wasInfoUpdated;
+        std::chrono::steady_clock::time_point m_lastUpdate;
+    };
+
+    class Panel : public IComponent {
+    public:
+        Panel(const std::string& title = "");
+        void setTitle(const std::string& title);
+        void setText(const std::string& text);
+        template <typename T, typename... Args>
+        T& setComponent(Args&&... args) {
+            static_assert(std::is_base_of_v<IComponent, T>, "T must inherit from IComponent");
+            static_assert(std::is_constructible_v<T, Args...>, "T cannot be constructed with the given arguments");
+            auto owner = std::make_unique<T>(std::forward<Args>(args)...);
+            T& ref = *owner;
+            m_subComponent = std::move(owner);
+            if (m_mgr) {
+                ref.setScreenManager(m_mgr);
+            }
+
+            return ref;
+        }
+        void takeComponent(std::unique_ptr<IComponent> component);
+        std::unique_ptr<IComponent> releaseComponent(IComponent* component);
+
+        std::string draw() const override;
+        void update();
+        int getHeight() const override;
+    private:
+        int m_minUpdateIntervalMs = 100;
+        std::string m_title;
+        std::vector<std::string> m_contentLines;
+        std::unique_ptr<IComponent> m_subComponent;
         std::chrono::steady_clock::time_point m_lastUpdate;
     };
 }

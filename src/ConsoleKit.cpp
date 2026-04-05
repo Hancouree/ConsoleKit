@@ -2,11 +2,28 @@
 #include <string>
 #include <algorithm>
 #include <numeric>
+#include <regex>
 
 namespace ck {
     namespace {
         auto GET_NOW() {
             return std::chrono::steady_clock::now();
+        }
+
+        std::vector<std::string> splitLines(const std::string& str)
+        {
+            std::vector<std::string> lines;
+            std::stringstream ss(str);
+            std::string line;
+            while (std::getline(ss, line)) {
+                lines.push_back(line);
+            }
+            return lines;
+        }
+
+        size_t visible_length(const std::string& s) {
+            static const std::regex ansi_re("\x1B\\[[0-9;]*[a-zA-Z]");
+            return std::regex_replace(s, ansi_re, "").length();
         }
 
         //SEQUENCES
@@ -40,10 +57,7 @@ namespace ck {
     ScreenManager::~ScreenManager()
     {
         if (!m_finished) {
-            int m_height = std::accumulate(m_components.begin(), m_components.end(), 0,
-                [](int x, const std::unique_ptr<IComponent>& c) {
-                    return x + c->getHeight();
-                });
+            int m_height = calculateComponentsHeight();
 
             int totalHeight = m_height + m_logs.size();
             if (totalHeight > 0) {
@@ -80,6 +94,31 @@ namespace ck {
         return add<Table>(columns);
     }
 
+    Panel& ScreenManager::addPanel(const std::string& title)
+    {
+        return add<Panel>(title);
+    }
+
+    void ScreenManager::takeComponent(std::unique_ptr<IComponent> component)
+    {
+        if (component) {
+            m_components.push_back(std::move(component));
+        }
+    }
+
+    std::unique_ptr<IComponent> ScreenManager::releaseComponent(IComponent* component)
+    {
+        for (auto it = m_components.begin(); it != m_components.end(); ++it) {
+            if (it->get() == component) {
+                auto component = std::move(*it);
+                m_components.erase(it);
+                return component;
+            }
+        }
+
+        return nullptr;
+    }
+
     void ScreenManager::setMaxLogs(size_t n)
     {
         m_maxLogs = n;
@@ -89,10 +128,7 @@ namespace ck {
     {
         if (m_components.empty() && m_logs.empty()) return;
 
-        int m_height = std::accumulate(m_components.begin(), m_components.end(), 0, 
-            [](int x, const std::unique_ptr<IComponent>& c) {
-                return x + c->getHeight();
-        });
+        int m_height = calculateComponentsHeight();
 
         std::cout << CURSOR_SAVE;
 
@@ -131,12 +167,19 @@ namespace ck {
         refresh();
     }
 
+    int ScreenManager::calculateComponentsHeight() const
+    {
+        return std::accumulate(m_components.begin(), m_components.end(), 0,
+                [](int x, const std::unique_ptr<IComponent>& c) {
+                    return x + c->getHeight();
+                });;
+    }
+
     ProgressBar::ProgressBar(int finalValue)
         : m_currentValue(0)
         , m_finalValue(finalValue)
         , m_width(50)
         , m_startTime(GET_NOW())
-        , m_lastDraw(m_startTime)
         , m_showPercent(false)
         , m_showSpeed(false)
         , m_showETA(false)
@@ -208,7 +251,7 @@ namespace ck {
         m_currentValue = std::min(currentValue, m_finalValue);
 
         auto now = GET_NOW();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastDraw).count();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
 
         if (elapsed > m_minUpdateIntervalMs || m_currentValue == m_finalValue) {
             if (m_mgr) {
@@ -217,7 +260,7 @@ namespace ck {
             else {
                 std::cout << CLEAR_LINE << draw() << std::flush;
             }
-            m_lastDraw = now;
+            m_lastUpdate = now;
         }
     }
 
@@ -273,8 +316,7 @@ namespace ck {
     }
 
     Spinner::Spinner()
-        : m_lastUpdate(GET_NOW())
-        , m_currentFrame(0)
+        : m_currentFrame(0)
         , m_finished(false)
     {
         m_frames = {
@@ -350,7 +392,6 @@ namespace ck {
         : m_width(50)
         , m_currentFrame(0)
         , m_delta(1)
-        , m_lastUpdate(GET_NOW())
         , m_style(Style::Marquee)
     {
     }
@@ -456,7 +497,6 @@ namespace ck {
 
     Table::Table(const std::vector<std::string>& columns) 
         : m_wasInfoUpdated(false)
-        , m_lastUpdate(GET_NOW())
     {
         m_columns = columns;
     }
@@ -550,5 +590,92 @@ namespace ck {
             output += (i + 1 < widths.size()) ? '-' + std::string(1, sep) + '-' : "+";  
         }
         return output;
+    }
+
+    Panel::Panel(const std::string& title) 
+        : m_subComponent(nullptr)
+    {
+        m_title = title;
+    }
+
+    void Panel::setTitle(const std::string& title)
+    {
+        m_title = title;
+    }
+
+    void Panel::setText(const std::string& text)
+    {
+        m_contentLines = splitLines(text);
+    }
+
+    void Panel::takeComponent(std::unique_ptr<IComponent> component)
+    {
+        m_subComponent = std::move(component);
+    }
+
+    std::unique_ptr<IComponent> Panel::releaseComponent(IComponent* component)
+    {
+        if (m_subComponent.get() == component) {
+            auto component = std::move(m_subComponent);
+            m_subComponent = nullptr;
+            return component;
+        }
+
+        return nullptr;
+    }
+
+    std::string Panel::draw() const
+    {
+        std::string output = color_to_ansi(m_color);
+
+        std::vector<std::string> lines;
+        if (m_subComponent) {
+            lines = splitLines(m_subComponent->draw());
+        }
+        else {
+            lines = m_contentLines;
+        }
+
+        if (lines.empty() && m_title.empty()) return "";
+
+        size_t maxWidth = m_title.length();
+        for (const auto& l : lines) maxWidth = std::max(maxWidth, visible_length(l));
+
+        int innerWidth = maxWidth + 2;
+
+        output += "+";
+        output += '-' + m_title + std::string(innerWidth - m_title.length() - 1, '-');
+        output += "+\n";
+
+        for (const auto& line : lines) {
+            output += "| " + line + std::string(innerWidth - static_cast<int>(visible_length(line)) - 1, ' ') + "|\n";
+        }
+
+        output += "+" + std::string(innerWidth, '-') + "+" + RESET;
+
+        return output;
+    }
+
+    void Panel::update()
+    {
+        auto now = GET_NOW();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
+
+        if (elapsed > m_minUpdateIntervalMs) {
+            if (m_mgr) {
+                m_mgr->refresh();
+            }
+            else {
+                std::cout << "\r" << draw() << std::flush;
+            }
+
+            m_lastUpdate = now;
+        }
+    }
+
+    int Panel::getHeight() const
+    {
+        int contentHeight = m_subComponent ? m_subComponent->getHeight() : m_contentLines.size();
+        return contentHeight + 2;
     }
 }
