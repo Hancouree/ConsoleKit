@@ -1,26 +1,21 @@
 #include "../../include/ConsoleKit/components/ProgressBar.h"
 #include "../../include/ConsoleKit/ScreenManager.h"
+#include <string>
 
 namespace ck {
-    ProgressBar::ProgressBar(int finalValue)
-        : m_currentValue(0)
+    ProgressBar::ProgressBar(int currentValue, int finalValue, Container* parent)
+        : StyledComponent(parent)
+        , m_currentValue(currentValue)
         , m_finalValue(finalValue)
         , m_width(50)
-        , m_startTime(GET_NOW())
+        , m_startTime(detail::GET_NOW())
         , m_showPercent(false)
         , m_showSpeed(false)
         , m_showETA(false)
     {
-        if (finalValue <= 0) throw std::invalid_argument("finalValue must be > 0");
-    }
-
-    ProgressBar::ProgressBar(int currentValue, int finalValue) : ProgressBar(finalValue)
-    {
         if (currentValue < 0 || currentValue > finalValue) {
             throw std::invalid_argument("currentValue out of range");
         }
-
-        m_currentValue = currentValue;
     }
 
     void ProgressBar::setWidth(int width) {
@@ -38,7 +33,7 @@ namespace ck {
         std::string output;
 
         if (m_color != Grey) {
-            output += color_to_ansi(m_color);
+            output += detail::color_to_ansi(m_color);
         }
 
         if (!m_text.empty()) {
@@ -81,7 +76,7 @@ namespace ck {
     void ProgressBar::update(int currentValue) {
         m_currentValue = std::min(currentValue, m_finalValue);
 
-        auto now = GET_NOW();
+        auto now = detail::GET_NOW();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
 
         if (elapsed > m_minUpdateIntervalMs || m_currentValue == m_finalValue) {
@@ -89,7 +84,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << CLEAR_LINE << draw() << std::flush;
+                std::cout << detail::CLEAR_LINE << draw() << std::flush;
             }
             m_lastUpdate = now;
         }
@@ -119,7 +114,7 @@ namespace ck {
     }
 
     double ProgressBar::getSpeed() const {
-        auto now = GET_NOW();
+        auto now = detail::GET_NOW();
         auto elapsed = std::chrono::duration<double>(now - m_startTime).count();
         if (elapsed < 0.001) return 0;
         return m_currentValue / elapsed;

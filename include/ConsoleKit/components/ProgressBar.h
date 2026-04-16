@@ -1,11 +1,10 @@
 #pragma once
-#include "../IComponent.h"
+#include "../Component.h"
 
 namespace ck {
-    class ProgressBar : public IComponent {
+    class ProgressBar : public StyledComponent {
     public:
-        ProgressBar(int finalValue);
-        ProgressBar(int currentValue, int finalValue);
+        ProgressBar(int currentValue, int finalValue, Container* parent = nullptr);
 
         void setWidth(int width);
         void setText(const std::string& str);

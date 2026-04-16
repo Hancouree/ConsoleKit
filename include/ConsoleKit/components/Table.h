@@ -1,10 +1,10 @@
 #pragma once
-#include "../IComponent.h"
+#include "../Component.h"
 
 namespace ck {
-    class Table : public IComponent {
+    class Table : public StyledComponent {
     public:
-        Table(const std::vector<std::string>& columns);
+        Table(const std::vector<std::string>& columns, Container* parent = nullptr);
 
         void addRow(const std::vector<std::string>& row);
         std::string draw(const StyleContext& ctx = {}) const override;

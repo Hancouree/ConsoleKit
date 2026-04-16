@@ -2,11 +2,11 @@
 #include "../../include/ConsoleKit/ScreenManager.h"
 
 namespace ck {
-    Table::Table(const std::vector<std::string>& columns)
-        : m_wasInfoUpdated(false)
-    {
-        m_columns = columns;
-    }
+    Table::Table(const std::vector<std::string>& columns, Container* parent) 
+        : StyledComponent(parent)
+        , m_wasInfoUpdated(false)
+        , m_columns(columns)
+    {}
 
     void Table::addRow(const std::vector<std::string>& row)
     {
@@ -22,7 +22,7 @@ namespace ck {
     std::string Table::draw(const StyleContext& ctx) const
     {
         auto widths = getColumnsWidth();
-        std::string tColor = color_to_ansi(m_color);
+        std::string tColor = detail::color_to_ansi(m_color);
 
         std::string output;
 
@@ -66,9 +66,9 @@ namespace ck {
     {
         std::vector<int> widths;
         for (size_t col = 0; col < m_columns.size(); ++col) {
-            int w = visible_length(m_columns[col]);
+            int w = detail::visible_length(m_columns[col]);
             for (const auto& row : m_rows) {
-                w = std::max(w, (int)visible_length(row[col]));
+                w = std::max(w, (int)detail::visible_length(row[col]));
             }
             widths.push_back(w);
         }

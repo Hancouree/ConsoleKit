@@ -1,6 +1,8 @@
-#include "../include/ConsoleKit/VLayout.h"
+#include "../../include/ConsoleKit/layouts/VLayout.h"
 
 namespace ck {
+    VLayout::VLayout(Container* parent) : Layout(parent) {}
+
     std::string VLayout::draw(const StyleContext& ctx) const {
         std::string output;
         for (size_t i = 0; i < m_components.size(); ++i) {

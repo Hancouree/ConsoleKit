@@ -11,17 +11,7 @@ namespace ck {
         ScreenManager();
         ~ScreenManager();
 
-        template <typename T, typename... Args>
-        T& add(Args&&... args) {
-            return m_rootLayout->add<T>(std::forward<Args>(args)...);
-        };
-
-        /*ProgressBar& addProgressBar(int finalValue);
-        ProgressBar& addProgressBar(int currentValue, int finalValue);
-        Spinner& addSpinner(const std::string& str = "");
-        ActivityBar& addActivityBar(const std::string& str = "");
-        Table& addTable(const std::vector<std::string>& columns);
-        Panel& addPanel(const std::string& title = "");*/
+        Layout* getLayout() const;
 
         void setMaxLogs(size_t n);
         void refresh();

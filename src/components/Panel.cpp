@@ -2,9 +2,10 @@
 #include "../../include/ConsoleKit/ScreenManager.h"
 
 namespace ck {
-    Panel::Panel(const std::string& title)
+    Panel::Panel(const std::string& title, Container* parent) 
+        : StyledContainer(parent)
+        , m_title(title)
     {
-        m_title = title;
     }
 
     void Panel::setTitle(const std::string& title)
@@ -14,11 +15,11 @@ namespace ck {
 
     void Panel::setText(const std::string& text)
     {
-        m_contentLines = splitLines(text);
+        m_contentLines = detail::splitLines(text);
         update();
     }
 
-    void Panel::takeComponent(std::unique_ptr<IComponent> component)
+    void Panel::takeComponent(Component* component)
     {
         if (!m_components.empty()) {
             throw std::logic_error(
@@ -27,7 +28,7 @@ namespace ck {
             );
         }
 
-        m_components.push_back(std::move(component));
+        Container::takeComponent(component);
     }
 
     std::string Panel::draw(const StyleContext& ctx) const
@@ -35,12 +36,12 @@ namespace ck {
         StyleContext innerCtx = ctx;
         if (m_color != Grey) innerCtx.fg = m_color;
 
-        std::string pColor = color_to_ansi(m_color);
-        size_t titleVisLen = visible_length(m_title);
+        std::string pColor = detail::color_to_ansi(m_color);
+        size_t titleVisLen = detail::visible_length(m_title);
 
         std::vector<std::string> lines;
         if (!m_components.empty()) {
-            lines = splitLines(m_components[0]->draw(innerCtx));
+            lines = detail::splitLines(m_components[0]->draw(innerCtx));
         }
         else {
             lines = m_contentLines;
@@ -49,7 +50,7 @@ namespace ck {
         if (lines.empty() && m_title.empty()) return "";
 
         size_t maxWidth = titleVisLen;
-        for (const auto& l : lines) maxWidth = std::max(maxWidth, visible_length(l));
+        for (const auto& l : lines) maxWidth = std::max(maxWidth, detail::visible_length(l));
         int innerWidth = static_cast<int>(maxWidth) + 2;
 
         std::string output = pColor;
@@ -66,9 +67,9 @@ namespace ck {
         output += "+\n";
 
         for (const auto& line : lines) {
-            output += pColor + "| " + RESET;
+            output += pColor + "| " + detail::RESET;
             output += line;
-            output += pColor + std::string(std::max(0, innerWidth - static_cast<int>(visible_length(line)) - 1), ' ') + "|\n";
+            output += pColor + std::string(std::max(0, innerWidth - static_cast<int>(detail::visible_length(line)) - 1), ' ') + "|\n";
         }
 
         output += pColor + "+" + std::string(innerWidth, '-') + "+";
@@ -80,7 +81,7 @@ namespace ck {
 
     void Panel::update()
     {
-        auto now = GET_NOW();
+        auto now = detail::GET_NOW();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
 
         if (elapsed > m_minUpdateIntervalMs) {

@@ -2,9 +2,11 @@
 #include <numeric>
 
 namespace ck {
+    Layout::Layout(Container* parent) : Container(parent) {}
+
     int Layout::getHeight() const {
         return std::accumulate(m_components.begin(), m_components.end(), 0,
-            [](int x, const std::unique_ptr<IComponent>& c) {
+            [](int x, Component* c) {
                 return x + (c ? c->getHeight() : 0);
             });
     }

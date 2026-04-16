@@ -1,14 +1,27 @@
 #pragma once
 #include <memory>
-#include "IComponent.h"
+#include "Component.h"
 
 namespace ck {
-    class Container {
+    class Container : public Component {
     public:
-        virtual ~Container() = default;
-        virtual void takeComponent(std::unique_ptr<IComponent> component);
-        std::unique_ptr<IComponent> releaseComponent(IComponent* component);
+        Container(Container* parent = nullptr);
+        virtual ~Container();
+
+        virtual void takeComponent(Component* component);
+        Component* releaseComponent(Component* component);
     protected:
-        std::vector<std::unique_ptr<IComponent>> m_components;
+        std::vector<Component*> m_components;
+    };
+
+    class StyledContainer : public Container {
+    public:
+        StyledContainer(Container* parent = nullptr);
+        virtual ~StyledContainer() = default;
+
+        virtual void setColor(Color c) { m_color = c; }
+        virtual Color getColor() const { return m_color; }
+    protected:
+        Color m_color = Grey;
     };
 }

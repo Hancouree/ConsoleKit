@@ -1,8 +1,8 @@
 #pragma once
-#include "../IComponent.h"
+#include "../Component.h"
 
 namespace ck {
-    class ActivityBar : public IComponent {
+    class ActivityBar final : public StyledComponent {
     public:
         enum Style {
             Marquee,
@@ -10,13 +10,13 @@ namespace ck {
             Bounce,
         };
 
-        ActivityBar();
-        ActivityBar(const std::string& str);
+        ActivityBar(const std::string& str = "", Container* parent = nullptr);
 
         void setWidth(int width);
         void setStyle(Style s);
         void setText(const std::string& str);
         void setCurrentFrame(int frame);
+
         std::string draw(const StyleContext& ctx = {}) const override;
         void update();
     private:

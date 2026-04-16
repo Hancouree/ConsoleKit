@@ -2,17 +2,15 @@
 #include "../../include/ConsoleKit/ScreenManager.h"
 
 namespace ck {
-    Spinner::Spinner()
-        : m_currentFrame(0)
+    Spinner::Spinner(const std::string& str, Container* parent)
+        : StyledComponent(parent)
+        , m_currentFrame(0)
         , m_finished(false)
+        , m_text(str)
     {
         m_frames = {
             "|", "/", "-", "\\"
         };
-    }
-
-    Spinner::Spinner(const std::string& str) : Spinner() {
-        m_text = str;
     }
 
     void Spinner::setText(const std::string& str) {
@@ -33,7 +31,7 @@ namespace ck {
         std::string output;
 
         if (m_color != Grey) {
-            output = color_to_ansi(m_color);
+            output = detail::color_to_ansi(m_color);
         }
 
         if (!m_text.empty()) {
@@ -49,7 +47,7 @@ namespace ck {
     void Spinner::update() {
         if (m_finished) return;
 
-        auto now = GET_NOW();
+        auto now = detail::GET_NOW();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
 
         if (elapsed > m_minUpdateIntervalMs) {
@@ -59,7 +57,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << CLEAR_LINE << draw() << std::flush;
+                std::cout << detail::CLEAR_LINE << draw() << std::flush;
             }
 
             m_lastUpdate = now;
@@ -75,7 +73,7 @@ namespace ck {
             m_mgr->refresh();
         }
         else {
-            std::cout << CLEAR_LINE << draw() << "\n" << std::flush;
+            std::cout << detail::CLEAR_LINE << draw() << "\n" << std::flush;
         }
     }
 }

@@ -2,17 +2,14 @@
 #include "../../include/ConsoleKit/ScreenManager.h"
 
 namespace ck {
-    ActivityBar::ActivityBar()
-        : m_width(50)
+    ActivityBar::ActivityBar(const std::string& str, Container* parent)
+        : StyledComponent(parent)
+        , m_width(50)
         , m_currentFrame(0)
         , m_delta(1)
         , m_style(Style::Marquee)
+        , m_text(str)
     {
-    }
-
-    ActivityBar::ActivityBar(const std::string& str) : ActivityBar()
-    {
-        m_text = str;
     }
 
     void ActivityBar::setWidth(int width)
@@ -42,7 +39,7 @@ namespace ck {
         std::string output;
 
         if (m_color != Grey) {
-            output += color_to_ansi(m_color);
+            output += detail::color_to_ansi(m_color);
         }
 
         output += '[';
@@ -73,7 +70,7 @@ namespace ck {
 
     void ActivityBar::update()
     {
-        auto now = GET_NOW();
+        auto now = detail::GET_NOW();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
 
         if (elapsed > m_minUpdateIntervalMs) {
@@ -87,7 +84,7 @@ namespace ck {
                 m_mgr->refresh();
             }
             else {
-                std::cout << CLEAR_LINE << draw() << std::flush;
+                std::cout << detail::CLEAR_LINE << draw() << std::flush;
             }
 
             m_lastUpdate = now;

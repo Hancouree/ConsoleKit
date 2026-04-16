@@ -1,6 +1,7 @@
 #include "../include/ConsoleKit/ScreenManager.h"
-#include "../include/ConsoleKit/VLayout.h"
+#include "../include/ConsoleKit/layouts/VLayout.h"
 #include <string>
+#include <sstream>
 
 namespace ck {
     ScreenManager::ScreenManager()
@@ -10,18 +11,23 @@ namespace ck {
         , m_lastHeight(0)
     {
         m_rootLayout->setScreenManager(this);
-        std::cout << HIDE_CURSOR;
+        std::cout << detail::HIDE_CURSOR;
     }
 
     ScreenManager::~ScreenManager() {
         if (!m_finished) {
             if (m_lastHeight > 0) {
-                std::cout << move_down(m_lastHeight);
+                std::cout << detail::move_down(m_lastHeight);
             }
 
-            std::cout << SHOW_CURSOR << std::endl;
+            std::cout << detail::SHOW_CURSOR << std::endl;
             m_finished = true;
         }
+    }
+
+    Layout* ScreenManager::getLayout() const
+    {
+        return m_rootLayout.get();
     }
 
     void ScreenManager::setMaxLogs(size_t n)
@@ -32,7 +38,7 @@ namespace ck {
     void ScreenManager::refresh()
     {
         if (m_lastHeight > 0) {
-            std::cout << move_up(m_lastHeight);
+            std::cout << detail::move_up(m_lastHeight);
         }
 
         std::string frameContent = m_rootLayout->draw();
@@ -42,21 +48,21 @@ namespace ck {
         std::stringstream ss(frameContent);
         std::string line;
         while (std::getline(ss, line)) {
-            output += CLEAR_LINE + line + "\n";
+            output += detail::CLEAR_LINE + line + "\n";
             currentHeight++;
         }
 
         for (const auto& msg : m_logs) {
-            output += CLEAR_LINE + msg + "\n";
+            output += detail::CLEAR_LINE + msg + "\n";
             currentHeight++;
         }
 
         if (currentHeight < m_lastHeight) {
             for (int i = 0; i < (m_lastHeight - currentHeight); ++i) {
-                output += CLEAR_LINE + '\n';
+                output += detail::CLEAR_LINE + '\n';
             }
 
-            output += move_up(m_lastHeight - currentHeight);
+            output += detail::move_up(m_lastHeight - currentHeight);
         }
 
         std::cout << output << std::flush;

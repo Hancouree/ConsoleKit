@@ -1,27 +1,16 @@
 #pragma once
-#include "../IComponent.h"
+#include "../Component.h"
 #include "../Container.h"
 
 namespace ck {
-    class Panel : public IComponent, public Container {
+    class Panel final : public StyledContainer {
     public:
-        Panel(const std::string& title = "");
+        Panel(const std::string& title = "", Container* parent = nullptr);
+
         void setTitle(const std::string& title);
         void setText(const std::string& text);
 
-        template <typename T, typename... Args>
-        T& setComponent(Args&&... args) {
-            static_assert(std::is_base_of_v<IComponent, T>, "T must inherit from IComponent");
-            static_assert(std::is_constructible_v<T, Args...>, "T cannot be constructed with the given arguments");
-            auto owner = std::make_unique<T>(std::forward<Args>(args)...);
-            T& ref = *owner;
-
-            takeComponent(std::move(owner));
-
-            return ref;
-        }
-
-        virtual void takeComponent(std::unique_ptr<IComponent> component) override;
+        virtual void takeComponent(Component* component) override;
 
         std::string draw(const StyleContext& ctx = {}) const override;
         void update();

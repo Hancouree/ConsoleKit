@@ -1,11 +1,10 @@
 #pragma once
-#include "../IComponent.h"
+#include "../Component.h"
 
 namespace ck {
-    class Spinner : public IComponent {
+    class Spinner : public StyledComponent {
     public:
-        Spinner();
-        Spinner(const std::string& str);
+        Spinner(const std::string& str = "", Container* parent = nullptr);
 
         void setText(const std::string& str);
         void setFrames(const std::vector<std::string>& frames);
