@@ -20,7 +20,7 @@ namespace ck {
             return lines;
         }
 
-        size_t visible_length(const std::string& s)
+        int visible_length(const std::string& s)
         {
             static const std::regex ansi_re("\x1B\\[[0-9;]*[a-zA-Z]");
             return std::regex_replace(s, ansi_re, "").length();

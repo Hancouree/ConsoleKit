@@ -30,6 +30,14 @@ namespace ck {
         return m_rootLayout.get();
     }
 
+    void ScreenManager::setLayout(Layout* layout)
+    {
+        if (!layout) return;
+
+        m_rootLayout.reset(layout);
+        m_rootLayout->setScreenManager(this);
+    }
+
     void ScreenManager::setMaxLogs(size_t n)
     {
         m_maxLogs = n;

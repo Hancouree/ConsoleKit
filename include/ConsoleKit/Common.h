@@ -31,7 +31,7 @@ namespace ck {
     namespace detail {
         std::chrono::steady_clock::time_point GET_NOW();
         std::vector<std::string> splitLines(const std::string& str);
-        size_t visible_length(const std::string& s);
+        int visible_length(const std::string& s);
 
         inline constexpr const char* RESET = "\033[0m";
         inline constexpr const char* CLEAR_LINE = "\r\033[2K";

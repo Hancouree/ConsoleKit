@@ -37,7 +37,7 @@ namespace ck {
         if (m_color != Grey) innerCtx.fg = m_color;
 
         std::string pColor = detail::color_to_ansi(m_color);
-        size_t titleVisLen = detail::visible_length(m_title);
+        int titleVisLen = detail::visible_length(m_title);
 
         std::vector<std::string> lines;
         if (!m_components.empty()) {
@@ -49,7 +49,7 @@ namespace ck {
 
         if (lines.empty() && m_title.empty()) return "";
 
-        size_t maxWidth = titleVisLen;
+        int maxWidth = titleVisLen;
         for (const auto& l : lines) maxWidth = std::max(maxWidth, detail::visible_length(l));
         int innerWidth = static_cast<int>(maxWidth) + 2;
 

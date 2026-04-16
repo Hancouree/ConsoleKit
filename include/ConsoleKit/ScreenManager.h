@@ -11,9 +11,11 @@ namespace ck {
         ScreenManager();
         ~ScreenManager();
 
+        void setLayout(Layout* layout);
+        void setMaxLogs(size_t n);
+
         Layout* getLayout() const;
 
-        void setMaxLogs(size_t n);
         void refresh();
         void log(const std::string& message);
     private:
