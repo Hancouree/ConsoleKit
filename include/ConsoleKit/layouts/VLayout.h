@@ -6,5 +6,6 @@ namespace ck {
     public:
         VLayout(Container* parent = nullptr);
         std::string draw(const StyleContext& ctx = {}) const;
+        int getHeight() const override;
     };
 }

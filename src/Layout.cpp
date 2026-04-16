@@ -1,13 +1,17 @@
 #include "../include/ConsoleKit/Layout.h"
-#include <numeric>
 
 namespace ck {
-    Layout::Layout(Container* parent) : Container(parent) {}
+    Layout::Layout(Container* parent) 
+        : Container(parent) 
+        , m_spacing(1) 
+    {}
 
-    int Layout::getHeight() const {
-        return std::accumulate(m_components.begin(), m_components.end(), 0,
-            [](int x, Component* c) {
-                return x + (c ? c->getHeight() : 0);
-            });
+    void Layout::setSpacing(int spacing)
+    {
+        if (spacing <= 0) {
+            throw std::invalid_argument("Invalid spacing value");
+        }
+
+        m_spacing = spacing;
     }
 }

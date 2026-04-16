@@ -7,8 +7,9 @@ namespace ck {
     public:
         Layout(Container* parent = nullptr);
         virtual ~Layout() = default;
-
+        void setSpacing(int spacing);
         virtual std::string draw(const StyleContext& ctx = {}) const = 0;
-        int getHeight() const override;
+    protected:
+        int m_spacing;
     };
 }

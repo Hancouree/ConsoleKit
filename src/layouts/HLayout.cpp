@@ -52,7 +52,7 @@ namespace ck {
 				}
 
 				if (idx < lines.size() - 1) {
-					output += ' ';
+					output += std::string(m_spacing, ' ');
 				}
 			}
 
