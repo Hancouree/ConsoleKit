@@ -79,11 +79,15 @@ namespace ck {
 
     void ScreenManager::log(const std::string& message)
     {
-        if (m_logs.size() >= m_maxLogs) {
+        auto splitted = detail::splitLines(message);
+        for (auto& l : splitted) {
+            m_logs.push_back(std::move(l));
+        }
+
+        while (m_logs.size() > m_maxLogs) {
             m_logs.pop_front();
         }
 
-        m_logs.push_back(message);
         refresh();
     }
 }
