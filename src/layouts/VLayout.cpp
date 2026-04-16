@@ -5,14 +5,18 @@ namespace ck {
 
     std::string VLayout::draw(const StyleContext& ctx) const {
         std::string output;
-        for (size_t i = 0; i < m_components.size(); ++i) {
-            if (!m_components[i]) continue;
+        bool first = true;
+        for (const auto* comp : m_components) {
+            if (!comp) continue;
 
-            output += m_components[i]->draw(ctx);
-            if (i < m_components.size() - 1) {
-                output += std::string(m_spacing, '\n');
+            if (!first) {
+                output += std::string(m_spacing + 1, '\n');
             }
+
+            output += comp->draw(ctx);
+            first = false;
         }
+
         return output;
     }
 
@@ -25,6 +29,6 @@ namespace ck {
                 activeCount++;
             }
         }
-        return totalHeight + (activeCount > 1 ? (activeCount - 1) * m_spacing : 0);
+        return totalHeight + (activeCount - 1) * m_spacing;
     }
 }

@@ -8,7 +8,7 @@ namespace ck {
 
     void Layout::setSpacing(int spacing)
     {
-        if (spacing <= 0) {
+        if (spacing < 0) {
             throw std::invalid_argument("Invalid spacing value");
         }
 
