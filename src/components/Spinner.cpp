@@ -7,6 +7,7 @@ namespace ck {
         , m_currentFrame(0)
         , m_finished(false)
         , m_text(str)
+        , m_spinnerPosition(SpinnerPosition::Right)
     {
         m_frames = {
             "|", "/", "-", "\\"
@@ -23,6 +24,16 @@ namespace ck {
         m_frames = frames;
     }
 
+    void Spinner::setUpdateInterval(int ms)
+    {
+        m_minUpdateIntervalMs = ms;
+    }
+
+    void Spinner::setSpinnerPosition(SpinnerPosition pos)
+    {
+        m_spinnerPosition = pos;
+    }
+
     std::string Spinner::draw(const StyleContext& ctx) const {
         if (m_finished) {
             return m_text;
@@ -30,15 +41,23 @@ namespace ck {
 
         std::string output;
 
-        if (m_color != Grey) {
-            output = detail::color_to_ansi(m_color);
-        }
+        output = detail::color_to_ansi(m_color);
 
         if (!m_text.empty()) {
-            output += m_text + " ";
+            switch (m_spinnerPosition)
+            {
+            case SpinnerPosition::Left:
+                output += m_frames[m_currentFrame] + " " + m_text;
+                break;
+            case SpinnerPosition::Right:
+                output += m_text + " " + m_frames[m_currentFrame];
+                break;
+            }
+        }
+        else {
+            output += m_frames[m_currentFrame];
         }
 
-        output += m_frames[m_currentFrame];
         output += ctx.apply();
 
         return output;
