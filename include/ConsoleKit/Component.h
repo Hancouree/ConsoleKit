@@ -11,7 +11,7 @@ namespace ck {
         virtual ~Component();
 
         void setScreenManager(ScreenManager* mgr) { m_mgr = mgr; }
-        virtual void setParent(Container* manager);
+        virtual void setParent(Container* parent);
 
         virtual std::string draw(const StyleContext& ctx = {}) const = 0;
 

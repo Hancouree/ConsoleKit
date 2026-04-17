@@ -7,10 +7,12 @@ namespace ck {
     public:
         Container(Container* parent = nullptr);
         virtual ~Container();
-
-        virtual void takeComponent(Component* component);
-        Component* releaseComponent(Component* component);
     protected:
+        friend class Component;
+
+        virtual void addChild(Component* component);
+        Component* removeChild(Component* component);
+
         std::vector<Component*> m_components;
     };
 

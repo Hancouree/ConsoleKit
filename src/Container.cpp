@@ -12,12 +12,14 @@ namespace ck {
         m_components.clear();
     }
 
-    void Container::takeComponent(Component* component)
+    void Container::addChild(Component* component)
     {
-        if (component) m_components.push_back(component);
+        if (component) {
+            m_components.push_back(component);
+        }
     }
 
-    Component* Container::releaseComponent(Component* component)
+    Component* Container::removeChild(Component* component)
     {
         for (auto it = m_components.begin(); it != m_components.end(); ++it) {
             if (*it == component) {
