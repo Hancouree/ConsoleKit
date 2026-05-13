@@ -3,6 +3,7 @@
 
 ck::ActivityBar::ActivityBar(const std::string& text, Container* parent)
 	: StyledComponent(parent)
+	, m_isFinished(false)
 	, m_text(text)
 	, m_lastTick(detail::GET_NOW())
 {
@@ -35,8 +36,18 @@ void ck::ActivityBar::setPosition(Position p)
 	m_position = p;
 }
 
+void ck::ActivityBar::finish(const std::string& message)
+{
+	m_finishMessage = message;
+	m_isFinished = true;
+}
+
 std::string ck::ActivityBar::draw(const StyleContext& ctx) const
 {
+	if (m_isFinished) {
+		return m_finishMessage + ctx.apply();
+	}
+
 	std::string output;
 	output += detail::color_to_ansi(m_color);
 
@@ -61,6 +72,8 @@ std::string ck::ActivityBar::draw(const StyleContext& ctx) const
 
 void ck::ActivityBar::tick()
 {
+	if (m_isFinished) return;
+
 	auto now = detail::GET_NOW();
 	auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastTick).count();
 
@@ -84,7 +97,12 @@ std::string ck::ActivityBar::drawMarquee() const
 
 std::string ck::ActivityBar::drawPulse() const
 {
-	return std::string(m_currentFrame, '=') + std::string(m_width - m_currentFrame, ' ');
+	if (m_delta > 0) {
+		return std::string(m_currentFrame, '=') + std::string(m_width - m_currentFrame, ' ');
+	}
+	else {
+		return std::string(m_width - m_currentFrame, ' ') + std::string(m_currentFrame, '=');
+	}
 }
 
 std::string ck::ActivityBar::drawBounce() const

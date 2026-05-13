@@ -17,6 +17,7 @@ namespace ck {
 		void setText(const std::string& text);
 		void setUpdateInterval(int ms);
 		void setPosition(Position p);
+		void finish(const std::string& message = "Done");
 
 		std::string draw(const StyleContext& ctx = {}) const override;
 		void tick() override;
@@ -31,6 +32,10 @@ namespace ck {
 		int m_delta = 1;
 		Style m_style = Style::Marquee;
 		Position m_position = Position::Right;
+
+		bool m_isFinished;
+		std::string m_finishMessage;
+
 		std::string m_text;
 		std::chrono::steady_clock::time_point m_lastTick;
 	};
