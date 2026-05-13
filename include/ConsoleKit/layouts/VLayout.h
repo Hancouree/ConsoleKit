@@ -1,11 +1,14 @@
 #pragma once
-#include "../Layout.h"
+#include <string>
+#include "../core/Layout.h"
 
 namespace ck {
-    class VLayout final : public Layout {
-    public:
-        VLayout(Container* parent = nullptr);
-        std::string draw(const StyleContext& ctx = {}) const;
-        int getHeight() const override;
-    };
+	class VLayout final : public Layout
+	{
+	public:
+		VLayout(Container* parent = nullptr);
+		std::string draw(const StyleContext& ctx = {}) const override;
+		int getHeight() const override;
+	};
 }
+

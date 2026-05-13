@@ -1,143 +1,101 @@
 #include "../../include/ConsoleKit/components/ProgressBar.h"
-#include "../../include/ConsoleKit/ScreenManager.h"
-#include <string>
+#include <stdexcept>
 
-namespace ck {
-    ProgressBar::ProgressBar(int currentValue, int finalValue, Container* parent)
-        : StyledComponent(parent)
-        , m_currentValue(currentValue)
-        , m_finalValue(finalValue)
-        , m_width(50)
-        , m_startTime(detail::GET_NOW())
-        , m_showPercent(false)
-        , m_showSpeed(false)
-        , m_showETA(false)
-    {
-        if (currentValue < 0 || currentValue > finalValue) {
-            throw std::invalid_argument("currentValue out of range");
-        }
-    }
+ck::ProgressBar::ProgressBar(int current, int total, Container* parent)
+	: StyledComponent(parent)
+	, m_current(current)
+	, m_total(total)
+	, m_startTime(detail::GET_NOW())
+{
+	if (total <= 0) throw std::invalid_argument("total must be greater than zero");
+	if (m_current < 0 || m_current > total) throw std::invalid_argument("current out of range");
+}
 
-    void ProgressBar::setWidth(int width) {
-        if (width <= 0) throw std::invalid_argument("Invalid width");
-        m_width = width;
-    }
+void ck::ProgressBar::setWidth(int width)
+{
+	if (width < 0) throw std::invalid_argument("Invalid width value");
+	m_width = width;
+}
 
-    void ProgressBar::setText(const std::string& str) {
-        m_text = str;
-    }
+void ck::ProgressBar::setText(const std::string& text)
+{
+	m_text = text;
+}
 
-    std::string ProgressBar::draw(const StyleContext& ctx) const {
-        int filled = static_cast<double>(m_currentValue) / m_finalValue * m_width;
+void ck::ProgressBar::update(int current)
+{
+	m_current = std::min(current, m_total);
+}
 
-        std::string output;
+void ck::ProgressBar::increment(int delta)
+{
+	update(m_current + delta);
+}
 
-        if (m_color != Grey) {
-            output += detail::color_to_ansi(m_color);
-        }
+ck::ProgressBar& ck::ProgressBar::withPercent(bool enable)
+{
+	m_showPercent = enable;
+	return *this;
+}
 
-        if (!m_text.empty()) {
-            output += m_text + " ";
-        }
+ck::ProgressBar& ck::ProgressBar::withSpeed(bool enable)
+{
+	m_showSpeed = enable;
+	return *this;
+}
 
-        output += '[';
+ck::ProgressBar& ck::ProgressBar::withETA(bool enable)
+{
+	m_showETA = enable;
+	return *this;
+}
 
-        for (int i = 0; i < m_width; ++i) {
-            if (i < filled) {
-                output += '=';
-            }
-            else if (i == filled) {
-                output += '>';
-            }
-            else {
-                output += ' ';
-            }
-        }
+std::string ck::ProgressBar::draw(const StyleContext& ctx) const
+{
+	int filled = static_cast<double>(m_current) / m_total * m_width;
 
-        output += ']';
+	std::string output;
+	output += detail::color_to_ansi(m_color);
+	if (!m_text.empty()) output += m_text + " ";
 
-        if (m_showPercent) {
-            output += " " + std::to_string(getPercent()) + '%';
-        }
+	output += '[';
+	for (int i = 0; i < m_width; ++i) {
+		if (i < filled) output += '=';
+		else if (i == filled) output += '>';
+		else output += ' ';
+	}
+	output += ']';
 
-        if (m_showSpeed) {
-            output += " " + std::to_string(static_cast<int>(getSpeed())) + " its/s";
-        }
+	if (m_showPercent) output += " " + std::to_string(getPercent()) + '%';
+	if (m_showSpeed) output += " " + std::to_string(static_cast<int>(getSpeed())) + " its/s";
+	if (m_showETA) output += " " + formatTime(getTimeLeft());
 
-        if (m_showETA) {
-            output += " " + formatTime(getTimeLeft());
-        }
+	return output + ctx.apply();
+}
 
-        output += ctx.apply();
+int ck::ProgressBar::getPercent() const
+{
+	return static_cast<int>(m_current * 100.0 / m_total);
+}
 
-        return output;
-    }
+double ck::ProgressBar::getSpeed() const
+{
+	auto elapsed = std::chrono::duration<double>(detail::GET_NOW() - m_startTime).count();
+	if (elapsed < 0.001) return 0;
+	return m_current / elapsed;
+}
 
-    void ProgressBar::update(int currentValue) {
-        m_currentValue = std::min(currentValue, m_finalValue);
+int ck::ProgressBar::getTimeLeft() const
+{
+	double speed = getSpeed();
+	if (speed < 0.001) return 9999;
+	return static_cast<int>((m_total - m_current) / speed);
+}
 
-        auto now = detail::GET_NOW();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastUpdate).count();
-
-        if (elapsed > m_minUpdateIntervalMs || m_currentValue == m_finalValue) {
-            if (m_mgr) {
-                m_mgr->refresh();
-            }
-            else {
-                std::cout << detail::CLEAR_LINE << draw() << std::flush;
-            }
-            m_lastUpdate = now;
-        }
-    }
-
-    void ProgressBar::increment(int delta) {
-        update(m_currentValue + delta);
-    }
-
-    ProgressBar& ProgressBar::withPercent(bool enable) {
-        m_showPercent = enable;
-        return *this;
-    }
-
-    ProgressBar& ProgressBar::withSpeed(bool enable) {
-        m_showSpeed = enable;
-        return *this;
-    }
-
-    ProgressBar& ProgressBar::withETA(bool enable) {
-        m_showETA = enable;
-        return *this;
-    }
-
-    int ProgressBar::getPercent() const {
-        return static_cast<int>(m_currentValue * 100.0 / m_finalValue);
-    }
-
-    double ProgressBar::getSpeed() const {
-        auto now = detail::GET_NOW();
-        auto elapsed = std::chrono::duration<double>(now - m_startTime).count();
-        if (elapsed < 0.001) return 0;
-        return m_currentValue / elapsed;
-    }
-
-    int ProgressBar::getTimeLeft() const {
-        auto speed = getSpeed();
-        if (speed < 0.001) return 9999;
-        int remaining = m_finalValue - m_currentValue;
-        return static_cast<int>(remaining / speed);
-    }
-
-    std::string ProgressBar::formatTime(int seconds) const {
-        if (seconds < 0) return "??:??";
-        if (seconds < 60) return std::to_string(seconds) + "s";
-        if (seconds < 3600) {
-            int minutes = seconds / 60;
-            int secs = seconds % 60;
-            return std::to_string(minutes) + "m " + std::to_string(secs) + "s";
-        }
-
-        int hours = seconds / 3600;
-        int minutes = (seconds % 3600) / 60;
-        return std::to_string(hours) + "h " + std::to_string(minutes) + "m";
-    }
+std::string ck::ProgressBar::formatTime(int seconds) const
+{
+	if (seconds < 0) return "??:??";
+	if (seconds < 60) return std::to_string(seconds) + "s";
+	if (seconds < 3600) return std::to_string(seconds / 60) + "m " + std::to_string(seconds % 60) + "s";
+	return std::to_string(seconds / 3600) + "h " + std::to_string((seconds % 3600) / 60) + "m";
 }

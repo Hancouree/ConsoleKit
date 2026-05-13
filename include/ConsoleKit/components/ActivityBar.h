@@ -1,35 +1,38 @@
 #pragma once
-#include "../Component.h"
+#include <string>
+#include <chrono>
+#include "../core/Component.h"
 
 namespace ck {
-    class ActivityBar final : public StyledComponent {
-    public:
-        enum Style {
-            Marquee,
-            Pulse,
-            Bounce,
-        };
+	class ActivityBar final : public StyledComponent
+	{
+	public:
+		enum class Style { Marquee, Pulse, Bounce };
+		enum class Position { Left, Right };
 
-        ActivityBar(const std::string& str = "", Container* parent = nullptr);
+		ActivityBar(const std::string& text = "", Container * parent = nullptr);
 
-        void setWidth(int width);
-        void setStyle(Style s);
-        void setText(const std::string& str);
-        void setCurrentFrame(int frame);
+		void setWidth(int width);
+		void setStyle(Style s);
+		void setText(const std::string& text);
+		void setUpdateInterval(int ms);
+		void setPosition(Position p);
 
-        std::string draw(const StyleContext& ctx = {}) const override;
-        void update();
-    private:
-        std::string drawMarquee() const;
-        std::string drawPulse() const;
-        std::string drawBounce() const;
+		std::string draw(const StyleContext& ctx = {}) const override;
+		void tick() override;
+	private:
+		std::string drawMarquee() const;
+		std::string drawPulse() const;
+		std::string drawBounce() const;
 
-        int m_minUpdateIntervalMs = 50;
-        int m_width;
-        Style m_style;
-        int m_currentFrame;
-        int m_delta;
-        std::string m_text;
-        std::chrono::steady_clock::time_point m_lastUpdate;
-    };
+		int m_intervalMs = 50;
+		int m_width = 50;
+		int m_currentFrame = 0;
+		int m_delta = 1;
+		Style m_style = Style::Marquee;
+		Position m_position = Position::Right;
+		std::string m_text;
+		std::chrono::steady_clock::time_point m_lastTick;
+	};
 }
+

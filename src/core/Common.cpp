@@ -1,4 +1,4 @@
-#include "../include/ConsoleKit/Common.h"
+#include "../../include/ConsoleKit/core/Common.h"
 #include <regex>
 #include <sstream>
 
