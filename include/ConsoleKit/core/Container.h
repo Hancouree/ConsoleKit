@@ -15,9 +15,12 @@ namespace ck {
 		void tick();
 
 		void setScreenManager(ScreenManager* mgr);
+	protected:
+		friend class Component;
+
 		virtual void addChild(Component* component);
 		Component* removeChild(Component* component);
-	protected:
+
 		std::vector<Component*> m_components;
 	};
 
