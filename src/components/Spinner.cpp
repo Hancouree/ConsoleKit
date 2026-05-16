@@ -38,11 +38,12 @@ void ck::Spinner::finish(const std::string& message)
 
 std::string ck::Spinner::draw(const StyleContext& ctx) const
 {
+    std::string color = detail::color_to_ansi(m_color);
+
     if (m_finished) {
-        return m_text + ctx.apply();
+        return color + m_text + ctx.apply();
     }
 
-    std::string color = detail::color_to_ansi(m_color);
     const std::string& frame = m_frames[m_currentFrame];
 
     std::string output = color;
