@@ -1,12 +1,29 @@
 #include "../../include/ConsoleKit/components/Table.h"
 #include <stdexcept>
+#include <ranges>
 
 ck::Table::Table(const std::vector<std::string>& columns, Container* parent)
 	: StyledComponent(parent)
-	, m_columns(columns)
-	, m_isDirty(true)
 {
-	m_fixedColumnWidths.resize(m_columns.size(), 0);
+	for (const auto& c : columns) {
+		m_columns.push_back({ c, ColumnAlign::Center, 0 });
+	}
+}
+
+void ck::Table::setHeaderVisible(bool visible)
+{
+	m_visibleHeader = visible;
+	m_isDirty = true;
+}
+
+void ck::Table::setColumnAlign(int index, ColumnAlign align)
+{
+	if (index < 0 || index >= m_columns.size()) {
+		throw std::invalid_argument("Invalid column index");
+	}
+
+	m_columns[index].align = align;
+	m_isDirty = true;
 }
 
 void ck::Table::addRow(const std::vector<std::string>& row)
@@ -15,14 +32,31 @@ void ck::Table::addRow(const std::vector<std::string>& row)
 		throw std::invalid_argument("Row size doesn't match column count");
 	}
 	
-	m_rows.push_back(row);
+	m_rows.push_back({ row, std::nullopt });
+	m_isDirty = true;
+}
+
+void ck::Table::setRowColor(int index, Color c)
+{
+	if (index < 0 || index >= m_rows.size()) {
+		throw std::invalid_argument("Invalid row index");
+	}
+
+	m_rows[index].color = c;
+	m_isDirty = true;
+}
+
+void ck::Table::setAlternatingColors(Color odd, Color even)
+{
+	m_altColors.odd = odd;
+	m_altColors.even = even;
 	m_isDirty = true;
 }
 
 void ck::Table::removeRow(int index)
 {
 	if (index < 0 || index >= m_rows.size()) {
-		throw std::invalid_argument("Invalid index");
+		throw std::invalid_argument("Invalid row index");
 	}
 
 	m_rows.erase(m_rows.begin() + index);
@@ -32,12 +66,12 @@ void ck::Table::removeRow(int index)
 void ck::Table::setColumnWidth(int index, int width)
 {
 	if (index < 0 || index >= m_columns.size()) {
-		throw std::invalid_argument("Invalid index");
+		throw std::invalid_argument("Invalid column index");
 	}
 
 	if (width <= 0) throw std::invalid_argument("Invalid width value");
 
-	m_fixedColumnWidths[index] = width;
+	m_columns[index].fixedWidth = width;
 	m_isDirty = true;
 }
 
@@ -51,7 +85,7 @@ void ck::Table::setCell(int row, int column, const std::string& text)
 		throw std::invalid_argument("Invalid column value");
 	}
 
-	m_rows[row][column] = text;
+	m_rows[row].values[column] = text;
 	m_isDirty = true;
 }
 
@@ -67,6 +101,13 @@ void ck::Table::clear()
 	m_isDirty = true;
 }
 
+void ck::Table::clearAlternatingColors()
+{
+	m_altColors.even = std::nullopt;
+	m_altColors.odd = std::nullopt;
+	m_isDirty = true;
+}
+
 std::string ck::Table::draw(const StyleContext& ctx) const
 {
 	if (!m_isDirty) {
@@ -78,42 +119,72 @@ std::string ck::Table::draw(const StyleContext& ctx) const
 	std::string output;
 	std::string line = drawLine(widths, '-');
 
-	output += tColor + (line.empty() ? "" : line + "\n");
-	output += tColor + drawRow(m_columns, widths) + "\n";
-	output += tColor + (line.empty() ? "" : line + "\n");
-	for (const auto& row : m_rows) {
-		output += tColor + drawRow(row, widths) + "\n";
+	output += tColor + line + "\n";
+	if (m_visibleHeader) {
+		auto view = m_columns
+			| std::views::transform([](const Column& c) { return c.value; });
+		std::vector<std::string> columnValues(view.begin(), view.end());
+
+		output += tColor + drawRow(columnValues, widths) + "\n";
+		output += tColor + line + "\n";
 	}
+	
+	size_t n = m_rows.size();
+	for (size_t i = 0; i < n; ++i) {
+		std::string rowColor = tColor;
+		if (m_rows[i].color.has_value()) {
+			rowColor = detail::color_to_ansi(m_rows[i].color.value());
+		}
+		else if (m_altColors.odd.has_value() && m_altColors.even.has_value()) {
+			Color c = (i % 2 == 0) ? m_altColors.even.value() : m_altColors.odd.value();
+			rowColor = detail::color_to_ansi(c);
+		}
+
+		output += rowColor + drawRow(m_rows[i].values, widths) + "\n";
+		if (i != n - 1) {
+			output += tColor + line + "\n";
+		}
+	}
+	
 	if (!m_rows.empty()) {
 		output += tColor + line;
 	}
-
-	output += detail::RESET; 
-	m_cachedOutput = output; 
+	
+	output += detail::RESET;
+	m_cachedOutput = output;
 	m_isDirty = false;
-
-	return output + ctx.apply(); 
+	return output + ctx.apply();
 }
 
 int ck::Table::getHeight() const
 {
-	int rowsSize = m_rows.size();
-	return rowsSize > 0 ? 4 + rowsSize : 3;
+	int n = m_rows.size();
+	int height = 1; 
+
+	if (m_visibleHeader) height += 2;
+
+	if (n > 0) {
+		height += n;       
+		height += n - 1;   
+		height += 1;       
+	}
+
+	return height;
 }
 
 std::vector<int> ck::Table::getColumnsWidth() const
 {
 	std::vector<int> widths;
 	for (size_t col = 0; col < m_columns.size(); ++col) {
-		int fixedValue = m_fixedColumnWidths[col];
+		int fixedValue = m_columns[col].fixedWidth;
 		if (fixedValue != 0) {
 			widths.push_back(fixedValue);
 			continue;
 		}
 
-		int w = detail::visible_length(m_columns[col]);
+		int w = detail::visible_length(m_columns[col].value);
 		for (const auto& row : m_rows) {
-			w = std::max(w, (int)detail::visible_length(row[col]));
+			w = std::max(w, (int)detail::visible_length(row.values[col]));
 		}
 
 		widths.push_back(w);
@@ -122,13 +193,23 @@ std::vector<int> ck::Table::getColumnsWidth() const
 	return widths;
 }
 
-std::string ck::Table::pad(const std::string& str, int width) const
+std::string ck::Table::pad(const std::string& str, int width, ColumnAlign align) const
 {
 	int len = detail::visible_length(str);
 	int total = width - len;
-	int left = total / 2;
-	int right = total - left;
-	return std::string(left, ' ') + str + std::string(right, ' ');
+	if (total <= 0) return str;
+	
+	if (align == ColumnAlign::Left) {
+		return str + std::string(total, ' ');
+	}
+	else if (align == ColumnAlign::Right) {
+		return std::string(total, ' ') + str;
+	}
+	else {
+		int left = total / 2;
+		int right = total - left;
+		return std::string(left, ' ') + str + std::string(right, ' ');
+	}
 }
 
 std::string ck::Table::drawRow(const std::vector<std::string>& cells, const std::vector<int>& widths) const
@@ -136,9 +217,9 @@ std::string ck::Table::drawRow(const std::vector<std::string>& cells, const std:
 	std::string output = "|";
 	for (size_t i = 0; i < cells.size(); ++i) {
 		output += ' ';
-		output += pad(cells[i], widths[i]);
+		output += pad(cells[i], widths[i], m_columns[i].align);
 		output += ' ';
-		output += (i + 1 < cells.size()) ? "|" : "|";
+		output += "|";
 	}
 	return output;
 }
@@ -148,7 +229,7 @@ std::string ck::Table::drawLine(const std::vector<int>& widths, char sep) const
 	std::string output = "+";
 	for (size_t i = 0; i < widths.size(); ++i) {
 		output += std::string(widths[i] + 2, '-');
-		output += (i + 1 < widths.size()) ? "+" : "+";
+		output += "+";
 	}
 	return output;
 }
