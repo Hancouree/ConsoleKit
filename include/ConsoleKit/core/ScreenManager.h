@@ -18,13 +18,8 @@ namespace ck {
 
 		void tick();
 		void refresh();
-
-		void log(const std::string& message);
-		void setMaxLogs(size_t n);
 	private:
 		std::unique_ptr<Layout> m_rootLayout;
-		std::list<std::string> m_logs;
-		size_t m_maxLogs;
 		int m_lastHeight;
 	};
 }

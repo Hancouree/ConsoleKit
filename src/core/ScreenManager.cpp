@@ -3,13 +3,22 @@
 #include "../../include/ConsoleKit/core/Common.h"
 #include "../../include/ConsoleKit/layouts/VLayout.h"
 #include <stdexcept>
+#include <Windows.h>
 #include <sstream>
 
 ck::ScreenManager::ScreenManager() 
 	: m_rootLayout(std::make_unique<VLayout>())
-	, m_maxLogs(25)
 	, m_lastHeight(0)
 {
+	SetConsoleOutputCP(CP_UTF8);
+
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD dwMode = 0;
+	if (hOut != INVALID_HANDLE_VALUE && GetConsoleMode(hOut, &dwMode)) {
+		dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+		SetConsoleMode(hOut, dwMode);
+	}
+
 	m_rootLayout->setScreenManager(this);
 	std::cout << detail::HIDE_CURSOR;
 }
@@ -48,11 +57,6 @@ void ck::ScreenManager::refresh()
 		++currentHeight;
 	}
 
-	for (const auto& msg : m_logs) {
-		output += msg + "\n";
-		++currentHeight;
-	}
-
 	if (currentHeight < m_lastHeight) {
 		for (int i = 0; i < m_lastHeight - currentHeight; ++i) {
 			output += std::string(detail::CLEAR_LINE) + "\n";
@@ -63,17 +67,4 @@ void ck::ScreenManager::refresh()
 
 	std::cout << output << std::flush;
 	m_lastHeight = currentHeight;
-}
-
-void ck::ScreenManager::log(const std::string& message)
-{
-	auto lines = detail::splitLines(message);
-	for (auto& l : lines) m_logs.push_back(std::move(l));
-	while (m_logs.size() > m_maxLogs) { m_logs.pop_front(); }
-	refresh();
-}
-
-void ck::ScreenManager::setMaxLogs(size_t n)
-{
-	m_maxLogs = n;
 }
