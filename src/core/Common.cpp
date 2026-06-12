@@ -23,7 +23,26 @@ namespace ck {
         int visible_length(const std::string& s)
         {
             static const std::regex ansi_re("\x1B\\[[0-9;]*[a-zA-Z]");
-            return std::regex_replace(s, ansi_re, "").length();
+            std::string stripped = std::regex_replace(s, ansi_re, "");
+
+            int len = 0;
+            for (size_t i = 0; i < stripped.size(); ) {
+                unsigned char c = stripped[i];
+                if (c < 0x80) {
+                    i += 1; 
+                }
+                else if (c < 0xE0) {
+                    i += 2; 
+                }
+                else if (c < 0xF0) {
+                    i += 3; 
+                }
+                else {
+                    i += 4;
+                }
+                len++;
+            }
+            return len;
         }
 
         std::string move_up(int n)

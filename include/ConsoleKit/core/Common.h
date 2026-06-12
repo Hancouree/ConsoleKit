@@ -22,8 +22,13 @@ namespace ck {
         White
     };
 
+    enum class Theme {
+        Ascii,
+        Unicode
+    };
+
     struct StyleContext {
-        Color fg = Grey;
+        Color fg = Color::Grey;
         std::string apply() const;
     };
 
