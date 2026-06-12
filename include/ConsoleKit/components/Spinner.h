@@ -13,20 +13,24 @@ namespace ck {
 
         void setText(const std::string& text);
         void setFrames(const std::vector<std::string>& frames);
-        void setUpdateInterval(int ms);
         void setPosition(Position pos);
         void finish(const std::string& message = "Done");
 
         std::string draw(const StyleContext& ctx = {}) const override;
         void tick() override;
     private:
-        int m_intervalMs = 100;
-        int m_currentFrame = 0;
-        bool m_finished = false;
-        Position m_position = Position::Right;
+        void setTheme(Theme theme) override {};
+
+        int m_currentFrame;
+        bool m_finished;
+        Position m_position;
         std::string m_text;
         std::vector<std::string> m_frames;
-        std::chrono::steady_clock::time_point m_lastTick;
+
+        static constexpr const char* SPINNER_PIPE = "|";
+        static constexpr const char* SPINNER_SLASH = "/";
+        static constexpr const char* SPINNER_DASH = "-";
+        static constexpr const char* SPINNER_BACKSLASH = "\\";
 	};
 }
 

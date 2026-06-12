@@ -2,9 +2,11 @@
 
 ck::Spinner::Spinner(const std::string& text, Container* parent)
     : StyledComponent(parent)
+    , m_currentFrame(0)
+    , m_finished(false)
+    , m_position(Position::Right)
     , m_text(text)
-    , m_frames({ "|", "/", "-", "\\" })
-    , m_lastTick(detail::GET_NOW())
+    , m_frames({ SPINNER_PIPE, SPINNER_SLASH, SPINNER_DASH, SPINNER_BACKSLASH })
 {
 }
 
@@ -17,12 +19,6 @@ void ck::Spinner::setFrames(const std::vector<std::string>& frames)
 {
     if (frames.empty()) throw std::invalid_argument("frames cannot be empty");
     m_frames = frames;
-}
-
-void ck::Spinner::setUpdateInterval(int ms)
-{
-    if (ms <= 0) throw std::invalid_argument("interval must be positive");
-    m_intervalMs = ms;
 }
 
 void ck::Spinner::setPosition(Position pos)
@@ -60,12 +56,5 @@ std::string ck::Spinner::draw(const StyleContext& ctx) const
 void ck::Spinner::tick()
 {
     if (m_finished) return;
-
-    auto now = detail::GET_NOW();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastTick).count();
-
-    if (elapsed >= m_intervalMs) {
-        m_currentFrame = (m_currentFrame + 1) % m_frames.size();
-        m_lastTick = now;
-    }
+    m_currentFrame = (m_currentFrame + 1) % m_frames.size();
 }
