@@ -1,11 +1,16 @@
-#include "../../include/ConsoleKit/components/ActivityBar.h"
+﻿#include "../../include/ConsoleKit/components/ActivityBar.h"
 #include <stdexcept>
 
 ck::ActivityBar::ActivityBar(const std::string& text, Container* parent)
 	: StyledComponent(parent)
+	, m_width(50)
+	, m_currentFrame(0)
+	, m_delta(1)
+	, m_style(Style::Marquee)
+	, m_position(Position::Right)
+	, m_showBorders(true)
 	, m_isFinished(false)
 	, m_text(text)
-	, m_lastTick(detail::GET_NOW())
 {
 }
 
@@ -25,10 +30,9 @@ void ck::ActivityBar::setText(const std::string& text)
 	m_text = text;
 }
 
-void ck::ActivityBar::setUpdateInterval(int ms)
+void ck::ActivityBar::setShowBorders(bool show)
 {
-	if (ms <= 0) throw std::invalid_argument("interval must be positive");
-	m_intervalMs = ms;
+	m_showBorders = show;
 }
 
 void ck::ActivityBar::setPosition(Position p)
@@ -55,13 +59,15 @@ std::string ck::ActivityBar::draw(const StyleContext& ctx) const
 		output += m_text + " ";
 	}
 
-	output += '[';
+	if (m_showBorders) output += '[';
+	
 	switch (m_style) {
 	case Style::Marquee: output += drawMarquee(); break;
 	case Style::Pulse: output += drawPulse();   break;
 	case Style::Bounce: output += drawBounce();  break;
 	}
-	output += ']';
+
+	if (m_showBorders) output += ']';
 
 	if (m_position == Position::Right && !m_text.empty()) {
 		output += " " + m_text;
@@ -74,40 +80,62 @@ void ck::ActivityBar::tick()
 {
 	if (m_isFinished) return;
 
-	auto now = detail::GET_NOW();
-	auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastTick).count();
-
-	if (elapsed >= m_intervalMs) {
-		m_currentFrame += m_delta;
-		if (m_currentFrame >= m_width || m_currentFrame < 0) {
-			m_delta *= -1;
-			m_currentFrame += m_delta * 2;
-		}
-
-		m_lastTick = now;
+	m_currentFrame += m_delta;
+	if (m_currentFrame >= m_width || m_currentFrame < 0) {
+		m_delta *= -1;
+		m_currentFrame += m_delta * 2;
 	}
 }
 
 std::string ck::ActivityBar::drawMarquee() const
 {
-	std::string s(m_width, ' ');
-	s[m_currentFrame] = m_delta > 0 ? '>' : '<';
+	std::string s;
+	for (int i = 0; i < m_width; ++i) {
+		if (i != m_currentFrame) {
+			s += ' ';
+			continue;
+		}
+
+		if (m_theme == Theme::Ascii) {
+			s += m_delta > 0 ? ASCII_MARQUEE_RIGHT : ASCII_MARQUEE_LEFT;
+		}
+		else {
+			s += m_delta > 0 ? UNICODE_MARQUEE_RIGHT : UNICODE_MARQUEE_LEFT;
+		}
+	}
+
 	return s;
 }
 
 std::string ck::ActivityBar::drawPulse() const
 {
+	std::string s;
+	s.reserve(m_currentFrame);
+
+	std::string current = m_theme == Theme::Ascii 
+		? std::string{ ASCII_PULSE } 
+		: UNICODE_PULSE;
+	
+	for (int i = 0; i < m_currentFrame; ++i) {
+		s += current;
+	}
+
 	if (m_delta > 0) {
-		return std::string(m_currentFrame, '=') + std::string(m_width - m_currentFrame, ' ');
+		return s + std::string(m_width - m_currentFrame, ' ');
 	}
 	else {
-		return std::string(m_width - m_currentFrame, ' ') + std::string(m_currentFrame, '=');
+		return std::string(m_width - m_currentFrame, ' ') + s;
 	}
 }
 
 std::string ck::ActivityBar::drawBounce() const
 {
-	std::string s(m_width, ' ');
-	s[m_currentFrame] = 'O';
+	std::string s(m_currentFrame, ' ');
+
+	s += m_theme == Theme::Ascii
+		? std::string{ ASCII_BOUNCE }
+		: UNICODE_BOUNCE;
+
+	s += std::string(m_width - m_currentFrame - 1, ' ');
 	return s;
 }

@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <chrono>
 #include "../core/Component.h"
+#include "../core/Common.h"
 
 namespace ck {
 	class ActivityBar final : public StyledComponent
@@ -15,7 +16,7 @@ namespace ck {
 		void setWidth(int width);
 		void setStyle(Style s);
 		void setText(const std::string& text);
-		void setUpdateInterval(int ms);
+		void setShowBorders(bool show);
 		void setPosition(Position p);
 		void finish(const std::string& message = "Done");
 
@@ -26,18 +27,27 @@ namespace ck {
 		std::string drawPulse() const;
 		std::string drawBounce() const;
 
-		int m_intervalMs = 50;
-		int m_width = 50;
-		int m_currentFrame = 0;
-		int m_delta = 1;
-		Style m_style = Style::Marquee;
-		Position m_position = Position::Right;
+		int m_width;
+		int m_currentFrame;
+		int m_delta;
+		Style m_style;
+		Position m_position;
+		bool m_showBorders;
 
 		bool m_isFinished;
 		std::string m_finishMessage;
-
 		std::string m_text;
-		std::chrono::steady_clock::time_point m_lastTick;
+
+		static constexpr char ASCII_MARQUEE_RIGHT = '>';
+		static constexpr char ASCII_MARQUEE_LEFT = '<';
+		static constexpr const char* UNICODE_MARQUEE_RIGHT = "►";
+		static constexpr const char* UNICODE_MARQUEE_LEFT = "◄";
+		
+		static constexpr char ASCII_PULSE = '=';
+		static constexpr const char* UNICODE_PULSE = "█";
+
+		static constexpr char ASCII_BOUNCE = 'O';
+		static constexpr const char* UNICODE_BOUNCE = "●";
 	};
 }
 
