@@ -1,42 +1,52 @@
 #include "../../include/ConsoleKit/components/Tree.h"
 #include "../../include/ConsoleKit/core/Common.h"
 
-ck::TreeNode::TreeNode(const std::string& label)
+ck::TreeNode::TreeNode(const std::string& label, std::function<void()> onDirty)
 	: m_label(label)
+	, m_onDirty(onDirty)
 {
 }
 
 ck::TreeNode* ck::TreeNode::addChild(const std::string& label)
 {
-	m_children.push_back(std::make_unique<TreeNode>(label));
+	m_children.push_back(std::make_unique<TreeNode>(label, m_onDirty));
+	markDirty();
 	return m_children.back().get();
+}
+
+void ck::TreeNode::markDirty()
+{
+	if (m_onDirty) m_onDirty();
 }
 
 ck::Tree::Tree(const std::string& label, Container* parent)
 	: StyledComponent(parent)
-	, m_root(label)
+	, m_root(label, [this]() { m_isDirty = true; })
 {
 }
 
-void ck::Tree::setGuideChar(char pipe, char branch, char last, char space)
+void ck::Tree::setTheme(Theme theme)
 {
-	m_pipe = pipe;
-	m_branch = branch;
-	m_last = last;
-	m_space = space;
+	m_theme = theme;
+	m_isDirty = true;
 }
 
 std::string ck::Tree::draw(const StyleContext& ctx) const
 {
-	std::string color = detail::color_to_ansi(m_color);
-	std::string output = color + m_root.getLabel();
+	if (m_isDirty) {
+		std::string color = detail::color_to_ansi(m_color);
+		std::string output = color + m_root.getLabel();
 
-	for (size_t i = 0; i < m_root.getChildren().size(); ++i) {
-		output += "\n";
-		drawNode(*m_root.getChildren()[i], "", i == m_root.getChildren().size() - 1, output);
+		for (size_t i = 0; i < m_root.getChildren().size(); ++i) {
+			output += "\n";
+			drawNode(*m_root.getChildren()[i], "", i == m_root.getChildren().size() - 1, output);
+		}
+
+		m_cachedOutput = output;
+		m_isDirty = false;
 	}
 
-	return output + ctx.apply();
+	return m_cachedOutput + ctx.apply();
 }
 
 int ck::Tree::getHeight() const
@@ -47,15 +57,23 @@ int ck::Tree::getHeight() const
 void ck::Tree::drawNode(const TreeNode& node, const std::string& prefix, bool isLast, std::string& output) const
 {
 	std::string color = detail::color_to_ansi(m_color);
+
+	bool isAscii = m_theme == Theme::Ascii;
+
+	std::string L = isAscii ? std::string{ ASCII_LAST } : UNICODE_LAST;
+	std::string B = isAscii ? std::string{ ASCII_BRANCH } : UNICODE_BRANCH;
+	std::string D = isAscii ? "--" : UNICODE_DASH;
+	std::string P = isAscii ? std::string{ ASCII_PIPE } : UNICODE_PIPE;
+
 	std::string connector = isLast
-		? std::string(1, m_last) + "-- "
-		: std::string(1, m_branch) + "-- ";
+		? L + D + " "
+		: B + D + " ";
 
 	output += color + prefix + connector + node.getLabel();
 
 	std::string childPrefix = prefix + (isLast
-		? std::string(1, m_space) + "   "
-		: std::string(1, m_pipe) + "   ");
+		? "   "
+		: P + "   ");
 
 	for (size_t i = 0; i < node.getChildren().size(); ++i) {
 		output += "\n";
