@@ -1,9 +1,10 @@
-#include "../../include/ConsoleKit/components/Table.h"
+﻿#include "../../include/ConsoleKit/components/Table.h"
 #include <stdexcept>
 #include <ranges>
 
 ck::Table::Table(const std::vector<std::string>& columns, Container* parent)
 	: StyledComponent(parent)
+	, m_visibleHeader(true)
 {
 	for (const auto& c : columns) {
 		m_columns.push_back({ c, ColumnAlign::Center, 0 });
@@ -95,6 +96,12 @@ void ck::Table::setColor(Color c)
 	m_isDirty = true;
 }
 
+void ck::Table::setTheme(Theme theme)
+{
+	m_theme = theme;
+	m_isDirty = true;
+}
+
 void ck::Table::clear()
 {
 	m_rows.clear();
@@ -117,19 +124,36 @@ std::string ck::Table::draw(const StyleContext& ctx) const
 	auto widths = getColumnsWidth();
 	std::string tColor = detail::color_to_ansi(m_color);
 	std::string output;
-	std::string line = drawLine(widths, '-');
 
-	output += tColor + line + "\n";
+	bool isAscii = m_theme == Theme::Ascii;
+	std::string upperLine = isAscii
+		? drawLine(widths)
+		: drawUpperLineUnicode(widths);
+	
+	std::string intermediateLine = isAscii
+		? upperLine
+		: drawIntermediateLineUnicode(widths);
+
+	std::string lowerLine = isAscii
+		? upperLine
+		: drawLowerLineUnicode(widths);
+
+	size_t n = m_rows.size();
+
+	output += tColor + upperLine + "\n";
 	if (m_visibleHeader) {
 		auto view = m_columns
 			| std::views::transform([](const Column& c) { return c.value; });
 		std::vector<std::string> columnValues(view.begin(), view.end());
 
-		output += tColor + drawRow(columnValues, widths) + "\n";
-		output += tColor + line + "\n";
+		output += tColor;
+		output += isAscii 
+			? drawRow(columnValues, widths) 
+			: drawRowUnicode(columnValues, widths);
+		output += "\n";
+		output += tColor + (n > 0 ? intermediateLine : lowerLine) + "\n";
 	}
 	
-	size_t n = m_rows.size();
 	for (size_t i = 0; i < n; ++i) {
 		std::string rowColor = tColor;
 		if (m_rows[i].color.has_value()) {
@@ -140,14 +164,19 @@ std::string ck::Table::draw(const StyleContext& ctx) const
 			rowColor = detail::color_to_ansi(c);
 		}
 
-		output += rowColor + drawRow(m_rows[i].values, widths) + "\n";
+		output += rowColor;
+		output += isAscii 
+			? drawRow(m_rows[i].values, widths) 
+			: drawRowUnicode(m_rows[i].values, widths);
+		output += "\n";
+
 		if (i != n - 1) {
-			output += tColor + line + "\n";
+			output += tColor + intermediateLine + "\n";
 		}
 	}
 	
 	if (!m_rows.empty()) {
-		output += tColor + line;
+		output += tColor + lowerLine;
 	}
 	
 	output += detail::RESET;
@@ -184,7 +213,7 @@ std::vector<int> ck::Table::getColumnsWidth() const
 
 		int w = detail::visible_length(m_columns[col].value);
 		for (const auto& row : m_rows) {
-			w = std::max(w, (int)detail::visible_length(row.values[col]));
+			w = std::max(w, detail::visible_length(row.values[col]));
 		}
 
 		widths.push_back(w);
@@ -214,22 +243,66 @@ std::string ck::Table::pad(const std::string& str, int width, ColumnAlign align)
 
 std::string ck::Table::drawRow(const std::vector<std::string>& cells, const std::vector<int>& widths) const
 {
-	std::string output = "|";
+	std::string output;
+	output += ASCII_VERTICAL;
 	for (size_t i = 0; i < cells.size(); ++i) {
 		output += ' ';
 		output += pad(cells[i], widths[i], m_columns[i].align);
 		output += ' ';
-		output += "|";
+		output += ASCII_VERTICAL;
 	}
 	return output;
 }
 
-std::string ck::Table::drawLine(const std::vector<int>& widths, char sep) const
+std::string ck::Table::drawRowUnicode(const std::vector<std::string>& cells, const std::vector<int>& widths) const
 {
-	std::string output = "+";
-	for (size_t i = 0; i < widths.size(); ++i) {
-		output += std::string(widths[i] + 2, '-');
-		output += "+";
+	std::string output = UNICODE_VERTICAL;
+	for (size_t i = 0; i < cells.size(); ++i) {
+		output += ' ';
+		output += pad(cells[i], widths[i], m_columns[i].align);
+		output += ' ';
+		output += UNICODE_VERTICAL;
 	}
 	return output;
+}
+
+std::string ck::Table::drawLine(const std::vector<int>& widths) const
+{
+	std::string output;
+	output += ASCII_CROSS;
+	for (size_t i = 0; i < widths.size(); ++i) {
+		output += std::string(widths[i] + 2, ASCII_HORIZONTAL);
+		output += ASCII_CROSS;
+	}
+	return output;
+}
+
+std::string ck::Table::drawLineUnicode(
+	const std::vector<int>& widths,
+	const std::string& left_joint,
+	const std::string& middle_joint,
+	const std::string& right_joint) const
+{
+	std::string output = left_joint;
+	size_t n = widths.size();
+	for (size_t i = 0; i < n; ++i) {
+		for (int j = 0; j < widths[i] + 2; ++j) output += UNICODE_HORIZONTAL;
+		output += (i == n - 1) ? right_joint : middle_joint;
+	}
+	return output;
+}
+
+std::string ck::Table::drawUpperLineUnicode(const std::vector<int>& widths) const
+{
+	return drawLineUnicode(widths, UNICODE_TOP_LEFT, UNICODE_TOP_T, UNICODE_TOP_RIGHT);
+}
+
+std::string ck::Table::drawIntermediateLineUnicode(const std::vector<int>& widths) const
+{
+	return drawLineUnicode(widths, UNICODE_LEFT_T, UNICODE_CROSS, UNICODE_RIGHT_T);
+}
+
+std::string ck::Table::drawLowerLineUnicode(const std::vector<int>& widths) const
+{
+	return drawLineUnicode(widths, UNICODE_BOTTOM_LEFT, UNICODE_BOTTOM_T, UNICODE_BOTTOM_RIGHT);
 }
