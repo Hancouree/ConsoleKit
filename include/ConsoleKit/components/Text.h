@@ -22,6 +22,7 @@ namespace ck {
 		int getWidth() const { return m_maxWidth; };
 	private:
 		std::vector<std::string> getLines(std::string raw) const;
+		void setTheme(Theme theme) override {};
 
 		std::string m_rawText;
 		Align m_align;
