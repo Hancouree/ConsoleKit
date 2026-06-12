@@ -8,11 +8,11 @@ std::string ck::VLayout::draw(const StyleContext& ctx) const
 {
     std::string output;
     bool first = true;
-    for (auto* c : m_components) {
-        if (!c) continue;
+    for (const auto& e : m_components) {
+        if (!e.c) continue;
         if (!first) output += std::string(m_spacing + 1, '\n');
         
-        output += c->draw(ctx);
+        output += e.c->draw(ctx);
         first = false;
     }
 
@@ -23,8 +23,8 @@ int ck::VLayout::getHeight() const
 {
     if (m_components.empty()) return 0;
     int totalHeight = 0;
-    for (auto* c : m_components) {
-        totalHeight += c->getHeight();
+    for (const auto& e : m_components) {
+        totalHeight += e.c->getHeight();
     }
     return totalHeight + (static_cast<int>(m_components.size()) - 1) * m_spacing;
 }

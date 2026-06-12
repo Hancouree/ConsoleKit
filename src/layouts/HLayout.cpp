@@ -12,10 +12,10 @@ std::string ck::HLayout::draw(const StyleContext& ctx) const
 	std::vector<std::vector<std::string>> lines;
 	std::vector<int> columnWidths;
 	int maxHeight = 0;
-	for (const auto& c : m_components) {
-		maxHeight = std::max(maxHeight, c->getHeight());
+	for (const auto& e : m_components) {
+		maxHeight = std::max(maxHeight, e.c->getHeight());
 
-		std::vector<std::string> l = detail::splitLines(c->draw(ctx));
+		std::vector<std::string> l = detail::splitLines(e.c->draw(ctx));
 		int columnWidth = 0;
 		for (const auto& s : l) {
 			columnWidth = std::max(columnWidth, detail::visible_length(s));
@@ -59,9 +59,9 @@ int ck::HLayout::getHeight() const
 	if (m_components.empty()) return 0;
 
 	auto it = std::max_element(m_components.begin(), m_components.end(),
-		[](Component* a, Component* b) {
-			return a->getHeight() < b->getHeight();
+		[](ComponentEntry a, ComponentEntry b) {
+			return a.c->getHeight() < b.c->getHeight();
 		});
 
-	return (*it)->getHeight();
+	return it->c->getHeight();
 }
