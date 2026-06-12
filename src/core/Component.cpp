@@ -1,7 +1,10 @@
 #include "../../include/ConsoleKit/core/Component.h"
 #include "../../include/ConsoleKit/core/Container.h"
 
-ck::Component::Component(Container* parent) : m_mgr(nullptr), m_parent(nullptr)
+ck::Component::Component(Container* parent) 
+    : m_mgr(nullptr)
+    , m_parent(nullptr)
+    , m_isDirty(true)
 {
 	setParent(parent);
 }
@@ -37,5 +40,6 @@ void ck::Component::setParent(Container* parent)
 ck::StyledComponent::StyledComponent(Container* parent) 
     : Component(parent)
     , m_color(Color::Grey)
+    , m_theme(Theme::Ascii)
 {
 }
