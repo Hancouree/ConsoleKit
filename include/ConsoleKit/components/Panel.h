@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <vector>
 #include "../core/Container.h"
@@ -29,5 +29,16 @@ namespace ck {
 		std::string m_title;
 		std::vector<std::string> m_headerLines;
 		std::vector<std::string> m_footerLines;
+	
+		static constexpr const char* ASCII_CORNER = "+";
+		static constexpr const char* ASCII_HORIZONTAL = "-";
+		static constexpr const char* ASCII_VERTICAL = "|";
+
+		static constexpr const char* UNICODE_TOP_LEFT = "╭";
+		static constexpr const char* UNICODE_TOP_RIGHT = "╮";
+		static constexpr const char* UNICODE_BOTTOM_LEFT = "╰";
+		static constexpr const char* UNICODE_BOTTOM_RIGHT = "╯";
+		static constexpr const char* UNICODE_HORIZONTAL = "─";
+		static constexpr const char* UNICODE_VERTICAL = "│";
 	};
 }

@@ -1,4 +1,4 @@
-#include "../../include/ConsoleKit/components/Panel.h"
+﻿#include "../../include/ConsoleKit/components/Panel.h"
 #include "../../include/ConsoleKit/core/Common.h"
 #include <stdexcept>
 
@@ -44,7 +44,7 @@ void ck::Panel::clearContent()
     m_headerLines.clear();
     m_footerLines.clear();
 	if (!m_components.empty()) {
-		auto* child = removeChild(m_components.front());
+		auto* child = removeChild(m_components.front().c);
 		delete child;
 	}
 }
@@ -53,10 +53,8 @@ std::string ck::Panel::draw(const StyleContext& ctx) const
 {
     StyleContext innerCtx = ctx;
     innerCtx.fg = m_color;
-
     std::string pColor = detail::color_to_ansi(m_color);
     int titleVisLen = detail::visible_length(m_title);
-
     int contentWidth = titleVisLen;
 
     std::vector<std::string> lines;
@@ -65,7 +63,7 @@ std::string ck::Panel::draw(const StyleContext& ctx) const
         lines.push_back(l);
     }
     if (!m_components.empty()) {
-        for (auto& l : detail::splitLines(m_components[0]->draw(innerCtx))) {
+        for (auto& l : detail::splitLines(m_components[0].c->draw(innerCtx))) {
             contentWidth = std::max(detail::visible_length(l), contentWidth);
             lines.push_back(std::move(l));
         }
@@ -79,49 +77,79 @@ std::string ck::Panel::draw(const StyleContext& ctx) const
 
     int innerWidth = contentWidth + m_horizontalPadding * 2;
 
+    const bool unicode = m_theme == Theme::Unicode;
+
+    const std::string TL = unicode ? UNICODE_TOP_LEFT : ASCII_CORNER;
+    const std::string TR = unicode ? UNICODE_TOP_RIGHT : ASCII_CORNER;
+    const std::string BL = unicode ? UNICODE_BOTTOM_LEFT : ASCII_CORNER;
+    const std::string BR = unicode ? UNICODE_BOTTOM_RIGHT : ASCII_CORNER;
+    const std::string H = unicode ? UNICODE_HORIZONTAL : ASCII_HORIZONTAL;
+    const std::string V = unicode ? UNICODE_VERTICAL : ASCII_VERTICAL;
+
+    auto hline = [&](int n) {
+        std::string s;
+        for (int i = 0; i < n; ++i) s += H;
+        return s;
+        };
+
     std::string output = pColor;
 
-    output += "+-";
     if (!m_title.empty()) {
-        int fill = innerWidth - titleVisLen;
+        output += TL + H; 
+
+        int fill = innerWidth - titleVisLen - 3;
+
         if (m_titleAlign == TitleAlign::Left) {
-            output += m_title + " " + std::string(std::max(0, fill - 1), '-');
+            output += " " + m_title;
+            if (fill >= 1) output += " " + hline(fill - 1);
+            else if (fill == 0) output += H;
         }
         else if (m_titleAlign == TitleAlign::Center) {
             int left = fill / 2;
             int right = fill - left;
-            output += std::string(std::max(0, left - 1), '-') + " " + m_title + " " + std::string(std::max(0, right - 1), '-');
+
+            if (left >= 1) output += hline(left) + " ";
+            else if (left == 0) output += H;
+
+            output += m_title;
+
+            if (right >= 1) output += " " + hline(right - 1);
+            else if (right == 0) output += H;
         }
-        else {
-            output += std::string(std::max(0, fill - 1), '-') + " " + m_title;
+        else { 
+            if (fill >= 1) output += hline(fill - 1) + " ";
+            else if (fill == 0) output += H;
+            output += m_title + " ";
         }
+
+        output += H + TR + "\n"; 
     }
     else {
-        output += std::string(innerWidth, '-');
+        output += TL + hline(innerWidth) + TR + "\n";
     }
-    output += "-+\n";
 
     for (int i = 0; i < m_verticalPadding; ++i)
-        output += pColor + "| " + std::string(innerWidth, ' ') + " |\n";
+        output += pColor + V + std::string(innerWidth, ' ') + V + "\n";
 
     for (const auto& line : lines) {
         int visLen = detail::visible_length(line);
         int pad = contentWidth - visLen;
-        output += pColor + "| ";
+        output += pColor + V;
         output += std::string(m_horizontalPadding, ' ');
         output += detail::RESET;
         output += line;
         output += pColor;
         output += std::string(pad, ' ');
         output += std::string(m_horizontalPadding, ' ');
-        output += " |\n";
+        output += V + "\n";
     }
 
     for (int i = 0; i < m_verticalPadding; ++i)
-        output += pColor + "| " + std::string(innerWidth, ' ') + " |\n";
+        output += pColor + V + std::string(innerWidth, ' ') + V + "\n";
 
-    output += pColor + "+-" + std::string(innerWidth, '-') + "-+";
+    output += pColor + BL + hline(innerWidth) + BR;
     output += ctx.apply();
+
     return output;
 }
 
@@ -129,7 +157,7 @@ int ck::Panel::getHeight() const
 {
     int contentHeight = m_headerLines.size() + m_footerLines.size();
     if (!m_components.empty()) {
-        contentHeight += m_components[0]->getHeight();
+        contentHeight += m_components[0].c->getHeight();
     }
     return contentHeight + 2 * m_verticalPadding + 2;
 }
