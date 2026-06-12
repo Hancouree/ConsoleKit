@@ -1,5 +1,6 @@
-#pragma once
+﻿#pragma once
 #include "../core/Component.h"
+#include "../core/Common.h"
 
 namespace ck {
 	class HSeparator final : public StyledComponent
@@ -9,18 +10,16 @@ namespace ck {
 
 		void setLabel(const std::string& label);
 		void setWidth(int width);
-		void setChar(char c);
-		
+		void setTheme(Theme theme) override;
+
 		virtual std::string draw(const StyleContext& ctx = {}) const;
 	private:
 		std::string m_label;
 		int m_width;
-		char m_char;
 
-		mutable std::string m_cachedOutput;
-		mutable bool m_isDirty;
-
-		static constexpr int DEFAULT_WIDTH = 40;
+		static constexpr int DEFAULT_WIDTH = 30;
+		static constexpr const char* ASCII_SYMBOL = "-";
+		static constexpr const char* UNICODE_SYMBOL = "━";
 	};
 }
 

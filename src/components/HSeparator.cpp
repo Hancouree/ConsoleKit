@@ -1,13 +1,10 @@
-#include "../../include/ConsoleKit/components/HSeparator.h"
-#include "../../include/ConsoleKit/core/Common.h"
+﻿#include "../../include/ConsoleKit/components/HSeparator.h"
 #include <stdexcept>
 
 ck::HSeparator::HSeparator(const std::string& label, Container* parent)
 	: StyledComponent(parent)
 	, m_label(label)
 	, m_width(DEFAULT_WIDTH)
-	, m_char('-')
-	, m_isDirty(true)
 {
 }
 
@@ -24,36 +21,41 @@ void ck::HSeparator::setWidth(int width)
 	m_isDirty = true;
 }
 
-void ck::HSeparator::setChar(char c)
+void ck::HSeparator::setTheme(Theme theme)
 {
-	m_char = c;
-	m_isDirty = true;
+    m_theme = theme;
+    m_isDirty = true;
 }
 
 std::string ck::HSeparator::draw(const StyleContext& ctx) const
 {
-	if (m_isDirty) {
-		std::string color = detail::color_to_ansi(m_color);
+    if (m_isDirty) {
+        std::string color = detail::color_to_ansi(m_color);
+        std::string fillChar = m_theme == Theme::Ascii ? ASCII_SYMBOL : UNICODE_SYMBOL;
+        std::string output = color;
 
-		std::string output = color;
-		if (m_label.empty()) {
-			output += std::string(m_width, m_char);
-		}
-		else {
-			int labelLen = detail::visible_length(m_label);
-			int fill = m_width - labelLen - 2;
-			if (fill <= 0) {
-				output += m_label;
-			}
-			else {
-				int left = fill / 2, right = fill - (fill / 2);
-				output += std::string(left, m_char) + ' ' + m_label + ' ' + std::string(right, m_char);
-			}
-		}
+        if (m_label.empty()) {
+            for (int i = 0; i < m_width; ++i) output += fillChar;
+        }
+        else {
+            int labelLen = detail::visible_length(m_label);
+            int fillLen = m_width - labelLen - 2;
 
-		m_cachedOutput = output;
-		m_isDirty = false;
-	}
+            if (fillLen <= 0) {
+                output += m_label;
+            }
+            else {
+                int left = fillLen / 2;
+                int right = fillLen - left;
 
-	return m_cachedOutput + ctx.apply();
+                for (int i = 0; i < left; ++i) output += fillChar;
+                output += " " + m_label + " ";
+                for (int i = 0; i < right; ++i) output += fillChar;
+            }
+        }
+
+        m_cachedOutput = output + ctx.apply();
+        m_isDirty = false;
+    }
+    return m_cachedOutput;
 }
